@@ -1,9 +1,19 @@
 import { summarize } from "../core/summary";
 import { useMonitor } from "../state/monitor";
 
-function Stat({ label, value, note }: { label: string; value: string | number; note?: string }) {
+function Stat({
+  label,
+  value,
+  note,
+  tone,
+}: {
+  label: string;
+  value: string | number;
+  note?: string;
+  tone?: "warning" | "hazard" | "silent" | "monitor";
+}) {
   return (
-    <article className="stat">
+    <article className={`stat ${tone ?? ""}`}>
       <span>{label}</span>
       <strong>{value}</strong>
       {note && <small>{note}</small>}
@@ -41,20 +51,20 @@ export function SummaryPage() {
         event. Time totals are the time spent in each state.
       </p>
       <section className="stats">
-        <Stat label="Warning events" value={summary.warningEvents} />
-        <Stat label="Hazard events" value={summary.hazardEvents} />
+        <Stat label="Warning events" value={summary.warningEvents} tone="warning" />
+        <Stat label="Hazard events" value={summary.hazardEvents} tone="hazard" />
         <Stat label="Unique PADs" value={summary.uniquePads.length} note={summary.uniquePads.join(", ") || "none"} />
-        <Stat label="Entries to Warning" value={summary.padsEnteringWarning} />
-        <Stat label="Entries to Hazard" value={summary.padsEnteringHazard} />
-        <Stat label="Silent → Warning" value={summary.silentToWarning} />
-        <Stat label="Silent → Warning → Hazard" value={summary.silentToWarningToHazard} />
-        <Stat label="Monitor → Warning" value={summary.monitorToWarning} />
-        <Stat label="Monitor → Warning → Hazard" value={summary.monitorToWarningToHazard} />
-        <Stat label="Monitor → Warning → Monitor" value={summary.monitorToWarningToMonitor} />
-        <Stat label="Time in Warning" value={summary.totalWarningLabel} />
-        <Stat label="Time in Hazard" value={summary.totalHazardLabel} />
-        <Stat label="Longest Warning" value={summary.longestWarningLabel} />
-        <Stat label="Longest Hazard" value={summary.longestHazardLabel} />
+        <Stat label="Entries to Warning" value={summary.padsEnteringWarning} tone="warning" />
+        <Stat label="Entries to Hazard" value={summary.padsEnteringHazard} tone="hazard" />
+        <Stat label="Silent → Warning" value={summary.silentToWarning} tone="silent" />
+        <Stat label="Silent → Warning → Hazard" value={summary.silentToWarningToHazard} tone="hazard" />
+        <Stat label="Monitor → Warning" value={summary.monitorToWarning} tone="monitor" />
+        <Stat label="Monitor → Warning → Hazard" value={summary.monitorToWarningToHazard} tone="hazard" />
+        <Stat label="Monitor → Warning → Monitor" value={summary.monitorToWarningToMonitor} tone="monitor" />
+        <Stat label="Time in Warning" value={summary.totalWarningLabel} tone="warning" />
+        <Stat label="Time in Hazard" value={summary.totalHazardLabel} tone="hazard" />
+        <Stat label="Longest Warning" value={summary.longestWarningLabel} tone="warning" />
+        <Stat label="Longest Hazard" value={summary.longestHazardLabel} tone="hazard" />
       </section>
     </main>
   );
