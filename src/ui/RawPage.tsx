@@ -5,7 +5,7 @@ import { formatClock } from "../core/padState";
 import { useMonitor } from "../state/monitor";
 
 export function RawPage() {
-  const { engine, snap, settings, setSettings, status, tauri, importText } = useMonitor();
+  const { engine, snap, settings, setSettings, status, tauri, importText, mode } = useMonitor();
   const [topic, setTopic] = useState("");
   const [text, setText] = useState("");
   const [family, setFamily] = useState("all");
@@ -71,7 +71,9 @@ export function RawPage() {
         Every MQTT payload is stored before decoding. {snap.rawCount} messages in this session, {snap.decodeErrors} decode
         notes, {snap.unknownTopics} unknown topics.{" "}
         {tauri
-          ? "The desktop app is subscribed to the broker and writing SQLite."
+          ? mode === "replay"
+            ? "This is the 22 Sept recording, played through the same decoder. Live MQTT is still subscribed; use Live when the broker has data."
+            : "The desktop app is subscribed to the broker and writing SQLite."
           : "Browser preview replays recordings. Live MQTT runs in the Windows app."}
       </p>
       <section className="filters">

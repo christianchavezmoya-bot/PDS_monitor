@@ -4,7 +4,7 @@ import fixture from "../fixtures/site-visit-22-sept.json";
 import { SessionEngine } from "../core/engine";
 import { parseJsonl } from "../core/export";
 import { dayKey } from "../core/padState";
-import { replayDelayMs, type ReplaySpeed } from "../core/replay";
+import { openBundledVisit, replayDelayMs, type ReplaySpeed } from "../core/replay";
 import type { EngineSnapshot, RawMqttMessage } from "../core/types";
 import { isTauri, loadRecordedMessages, persistRaw, saveDerived, startMqtt, type MqttSettings, type MqttStatus } from "../data/tauriBridge";
 
@@ -200,8 +200,14 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
       const recorded = await loadRecordedMessages();
       if (cancelled) return;
       liveLog.current = recorded;
-      engineRef.current.ingestAll(recorded);
-      publish();
+      if (openBundledVisit(recorded.length, true)) {
+        speedRef.current = "max";
+        setSpeedState("max");
+        beginReplay(fixture as RawMqttMessage[], "Site visit 22 Sept");
+      } else {
+        engineRef.current.ingestAll(recorded);
+        publish();
+      }
       unlisten = await startMqtt(readSettings(), setStatus, (message) => {
         liveLog.current.push(message);
         if (modeRef.current === "live") {
@@ -214,7 +220,7 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       unlisten?.();
     };
-  }, [publish]);
+  }, [beginReplay, publish]);
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("demo") !== "1") return;

@@ -189,7 +189,7 @@ export function MapPage() {
               </small>
             </div>
           ))}
-          {pads.length === 0 && <p>Waiting for proximity/3 messages.</p>}
+          {pads.length === 0 && <p>No live PAD messages yet. Replay site visit plays the 22 Sept recording.</p>}
         </div>
         <div className="panel">
           <h3>Derived PDS summary</h3>
