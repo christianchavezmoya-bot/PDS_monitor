@@ -1,8 +1,88 @@
-import{useState}from"react";import{Activity,Database,Map,BarChart3,AlertTriangle,Wifi}from"lucide-react";import type{Page,Pad,Generator}from"./types";
-const pads:Pad[]=[{id:28888,state:"SILENT",battery:4.1,lastSeen:"--:--:--",timeInState:"00:00:00"},{id:28899,state:"WARNING",battery:4.2,lastSeen:"--:--:--",timeInState:"00:00:00"},{id:28905,state:"MONITOR",battery:4,lastSeen:"--:--:--",timeInState:"00:00:00"}];
-const generators:Generator[]=[312860,312864,312847,312853].map(id=>({id,firmware:"2.3.10",health:"OK"}));
-function App(){const[page,setPage]=useState<Page>("live");return <div className="app"><header><div className="brand"><b>SHR</b><span>PDS MONITOR</span></div><nav><button onClick={()=>setPage("raw")} className={page==="raw"?"active":""}><Database/>Raw Data</button><button onClick={()=>setPage("live")} className={page==="live"?"active":""}><Map/>Live Map</button><button onClick={()=>setPage("summary")} className={page==="summary"?"active":""}><BarChart3/>Daily Summary</button><button onClick={()=>setPage("report")} className={page==="report"?"active":""}><AlertTriangle/>Warning & Hazard Report</button></nav><div className="live"><Wifi/> MQTT awaiting connection</div></header>{page==="live"?<LiveMap/>:<Placeholder page={page}/>}</div>}
-function LiveMap(){return <main className="dashboard"><aside><Panel title="CONTROLLER"><strong className="ok">● Awaiting MQTT</strong><p>Controller ID <b>—</b></p><p>Firmware <b>—</b></p><p>Last MQTT <b>—</b></p></Panel><Panel title="MACHINE STATUS"><div className="badge blue">PARKING BRAKE —</div><p>Input 1 <b>—</b></p><p>Input 2 (Parking Brake) <b>—</b></p><p>Feedback Stop <b>—</b></p></Panel><Panel title="GENERATORS">{generators.map((g,i)=><p key={g.id}><i>{i+1}</i> ID <b>{g.id}</b> <span className="ok">{g.health}</span><small>FW {g.firmware}</small></p>)}</Panel></aside><section className="map"><h1>LIVE PDS MONITOR</h1><h2>Shuttle Car and Continuous Miner</h2><div className="field monitor"><span>MONITOR ZONE</span><div className="field warning"><span>WARNING ZONE</span><div className="field hazard"><span>HAZARD ZONE</span><div className="machine">SHUTTLE CAR<br/><small>Replaceable top-down asset</small></div></div></div></div><div className="miner"><b>CONTINUOUS MINER</b><span>SILENT SAFE ZONE × 2</span><small>Tail faces Shuttle Car</small></div><div className="notice">Machine artwork will replace these temporary silhouettes; exact PAD X/Y is not inferred.</div></section><aside><Panel title={"DETECTED PADS ("+pads.length+")"}>{pads.map(p=><div className="pad" key={p.id}><b>PAD {p.id}</b><span className={"state "+p.state.toLowerCase()}>{p.state}</span><small>Battery {p.battery.toFixed(1)} V · {p.timeInState}</small></div>)}</Panel><Panel title="PDS STATE"><h2 className="warningText"><Activity/> AWAITING LIVE DATA</h2></Panel></aside></main>}
-function Panel({title,children}:{title:string,children:any}){return <div className="panel"><h3>{title}</h3>{children}</div>}
-function Placeholder({page}:{page:Page}){return <div className="placeholder"><h1>{page==="raw"?"Raw Data":page==="summary"?"Daily Summary":"Warning & Hazard Report"}</h1><p>Phase 1 shell ready. This module will be connected to the shared MQTT → recorder → decoder → event pipeline.</p></div>}
-export default App;
+import { Activity, AlertTriangle, BarChart3, Database, Map, Pause, Play, Square } from "lucide-react";
+import { MapPage } from "./ui/MapPage";
+import { RawPage } from "./ui/RawPage";
+import { ReportPage } from "./ui/ReportPage";
+import { SummaryPage } from "./ui/SummaryPage";
+import { MonitorProvider, useMonitor, type PageId } from "./state/monitor";
+import type { ReplaySpeed } from "./core/replay";
+
+const NAV: { id: PageId; label: string; icon: typeof Database }[] = [
+  { id: "raw", label: "Raw Data", icon: Database },
+  { id: "live", label: "Live Map", icon: Map },
+  { id: "summary", label: "Daily Summary", icon: BarChart3 },
+  { id: "report", label: "Warning & Hazard Report", icon: AlertTriangle },
+];
+
+function Shell() {
+  const monitor = useMonitor();
+  const speeds: ReplaySpeed[] = [1, 2, 5, 10, "max"];
+  return (
+    <div className="app">
+      <header>
+        <div className="brand">
+          <b>SHR</b>
+          <span>PDS MONITOR</span>
+        </div>
+        <nav>
+          {NAV.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={monitor.page === item.id ? "active" : ""}
+              onClick={() => monitor.setPage(item.id)}
+            >
+              <item.icon />
+              {item.label}
+            </button>
+          ))}
+        </nav>
+        <div className={`live ${monitor.status.state}`}>
+          <Activity />
+          {monitor.mode === "replay" ? `Replay ${monitor.replay.label}` : `MQTT ${monitor.status.state}`}
+        </div>
+      </header>
+      <div className="replaybar">
+        <button type="button" onClick={monitor.playFixture}>
+          Replay site visit
+        </button>
+        <button type="button" onClick={monitor.togglePlayback} disabled={monitor.mode !== "replay"}>
+          {monitor.replay.playing ? <Pause /> : <Play />}
+          {monitor.replay.playing ? "Pause" : "Play"}
+        </button>
+        <button type="button" onClick={monitor.stopReplay}>
+          <Square />
+          Live
+        </button>
+        <label>
+          Speed
+          <select
+            value={String(monitor.replay.speed)}
+            onChange={(e) => monitor.setSpeed(e.target.value === "max" ? "max" : (Number(e.target.value) as ReplaySpeed))}
+          >
+            {speeds.map((speed) => (
+              <option key={speed} value={speed}>
+                {speed === "max" ? "Maximum" : `${speed}x`}
+              </option>
+            ))}
+          </select>
+        </label>
+        <progress value={monitor.replay.index} max={Math.max(monitor.replay.total, 1)} />
+        <span>
+          {monitor.replay.index}/{monitor.replay.total}
+        </span>
+      </div>
+      {monitor.page === "raw" && <RawPage />}
+      {monitor.page === "live" && <MapPage />}
+      {monitor.page === "summary" && <SummaryPage />}
+      {monitor.page === "report" && <ReportPage />}
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <MonitorProvider>
+      <Shell />
+    </MonitorProvider>
+  );
+}

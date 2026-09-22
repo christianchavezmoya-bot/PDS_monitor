@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 520" fill="none">
+  <g class="wheel">
+    <rect x="18" y="150" width="26" height="48" rx="6" fill="#1b242b" stroke="#8ea4b2" stroke-width="3"/>
+    <rect x="196" y="150" width="26" height="48" rx="6" fill="#1b242b" stroke="#8ea4b2" stroke-width="3"/>
+    <rect x="18" y="250" width="26" height="48" rx="6" fill="#1b242b" stroke="#8ea4b2" stroke-width="3"/>
+    <rect x="196" y="250" width="26" height="48" rx="6" fill="#1b242b" stroke="#8ea4b2" stroke-width="3"/>
+  </g>
+  <path class="miner-tail" d="M92 8h56l18 70H74L92 8z" fill="#c9a15a"/>
+  <rect x="104" y="18" width="32" height="54" rx="4" fill="#6d5428"/>
+  <path class="miner-body" d="M48 78h144c18 0 28 16 28 36v210c0 28-16 48-40 56l-28 18H88l-28-18c-24-8-40-28-40-56V114c0-20 10-36 28-36z" fill="#d0892b"/>
+  <rect x="70" y="110" width="100" height="36" rx="6" fill="#1c140c" opacity="0.35"/>
+  <path d="M78 170h84v70H78z" fill="#1c140c" opacity="0.25"/>
+  <path d="M86 188h68M86 208h68M86 228h68" stroke="#f8e7c4" stroke-width="4" opacity="0.45"/>
+  <path d="M36 330c20 18 46 28 84 28s64-10 84-28l22 46c-28 36-64 58-106 58s-78-22-106-58l22-46z" fill="#a86716"/>
+  <rect x="28" y="392" width="184" height="28" rx="8" fill="#2a2118"/>
+  <circle cx="58" cy="470" r="28" fill="#3a3128" stroke="#d7dde2" stroke-width="6"/>
+  <circle cx="120" cy="478" r="32" fill="#3a3128" stroke="#d7dde2" stroke-width="6"/>
+  <circle cx="182" cy="470" r="28" fill="#3a3128" stroke="#d7dde2" stroke-width="6"/>
+  <path d="M40 470h160" stroke="#9aa7b0" stroke-width="4"/>
+  <text x="120" y="214" text-anchor="middle" fill="#1a1208" font-family="Segoe UI, Arial" font-size="18" font-weight="800">CM</text>
+</svg>

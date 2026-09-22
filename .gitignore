@@ -2,6 +2,7 @@ node_modules/
 dist/
 target/
 src-tauri/target/
+_extract/
 *.db
 *.db-shm
 *.db-wal

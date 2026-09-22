@@ -1,0 +1,24 @@
+[package]
+name = "shr-pds-monitor"
+version = "0.1.0"
+description = "SHR PDS Monitor"
+authors = ["SHR PDS Monitor"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+chrono = { version = "0.4", features = ["clock"] }
+rusqlite = { version = "0.32", features = ["bundled"] }
+rumqttc = "0.24"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

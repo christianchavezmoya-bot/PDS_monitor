@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "SHR PDS Monitor desktop permissions",
+  "windows": ["main"],
+  "permissions": ["core:default", "core:event:default"]
+}
