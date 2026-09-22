@@ -1,10 +1,79 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { derivedPds } from "../core/engine";
 import { formatClock, formatDuration, padStateName, parkingBrakeLabel } from "../core/padState";
 import { useMonitor } from "../state/monitor";
 import type { PadLive } from "../core/types";
 
-function MachineArt({ src, className }: { src: string; className: string }) {
+const VIEW = { w: 1000, h: 700 };
+const CAR = { x: 424, y: 108, w: 176, h: 318 };
+const MINER = { x: 410, y: 545, w: 180, h: 140 };
+const ZONE_CENTER = { x: 508, y: 262 };
+const CAB_SVG = { x: 6, y: 124, w: 68, h: 108 };
+const CAR_SVG = { w: 220, h: 460 };
+
+function boxStyle(box: { x: number; y: number; w: number; h: number }): CSSProperties {
+  return {
+    left: `${(box.x / VIEW.w) * 100}%`,
+    top: `${(box.y / VIEW.h) * 100}%`,
+    width: `${(box.w / VIEW.w) * 100}%`,
+    height: `${(box.h / VIEW.h) * 100}%`,
+  };
+}
+
+function pct(x: number, y: number): { left: string; top: string } {
+  return { left: `${(x / VIEW.w) * 100}%`, top: `${(y / VIEW.h) * 100}%` };
+}
+
+const ZONE_OUTLINE: Array<[number, number]> = [
+  [508, 22],
+  [630, 46],
+  [700, 108],
+  [688, 178],
+  [636, 228],
+  [742, 305],
+  [768, 372],
+  [674, 452],
+  [508, 498],
+  [330, 454],
+  [236, 376],
+  [268, 292],
+  [318, 214],
+  [348, 128],
+  [392, 52],
+];
+
+function smoothClosed(points: Array<[number, number]>): string {
+  const count = points.length;
+  let path = `M ${points[0][0]} ${points[0][1]}`;
+  for (let index = 0; index < count; index++) {
+    const prev = points[(index - 1 + count) % count];
+    const current = points[index];
+    const next = points[(index + 1) % count];
+    const after = points[(index + 2) % count];
+    const c1x = current[0] + (next[0] - prev[0]) / 6;
+    const c1y = current[1] + (next[1] - prev[1]) / 6;
+    const c2x = next[0] - (after[0] - current[0]) / 6;
+    const c2y = next[1] - (after[1] - current[1]) / 6;
+    path += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${next[0].toFixed(1)} ${next[1].toFixed(1)}`;
+  }
+  return `${path} Z`;
+}
+
+function zonePath(scale: number): string {
+  const { x: cx, y: cy } = ZONE_CENTER;
+  return smoothClosed(ZONE_OUTLINE.map(([x, y]) => [cx + (x - cx) * scale, cy + (y - cy) * scale]));
+}
+
+function cabBox() {
+  return {
+    x: CAR.x + (CAB_SVG.x / CAR_SVG.w) * CAR.w,
+    y: CAR.y + (CAB_SVG.y / CAR_SVG.h) * CAR.h,
+    w: (CAB_SVG.w / CAR_SVG.w) * CAR.w,
+    h: (CAB_SVG.h / CAR_SVG.h) * CAR.h,
+  };
+}
+
+function MachineArt({ src, className, style }: { src: string; className: string; style?: CSSProperties }) {
   const [svg, setSvg] = useState("");
   useEffect(() => {
     let cancelled = false;
@@ -18,20 +87,46 @@ function MachineArt({ src, className }: { src: string; className: string }) {
       cancelled = true;
     };
   }, [src]);
-  if (!svg) return <div className={className}>Machine asset missing</div>;
-  return <div className={className} dangerouslySetInnerHTML={{ __html: svg }} />;
+  if (!svg) return <div className={className} style={style}>Machine asset missing</div>;
+  return <div className={className} style={style} dangerouslySetInnerHTML={{ __html: svg }} />;
 }
 
 function markerStyle(stateCode: number, index: number, count: number): { left: string; top: string } {
   const t = count <= 1 ? 0.5 : index / Math.max(1, count - 1);
-  if (stateCode === 5) return { left: `${28 + t * 36}%`, top: "34%" };
-  if (stateCode === 4) return { left: `${16 + t * 58}%`, top: "22%" };
-  if (stateCode === 1) return { left: `${8 + t * 54}%`, top: "12%" };
+  const lane = index % 2 === 0;
+  if (stateCode === 5) return pct(lane ? 390 : 640, 240 + t * 70);
+  if (stateCode === 4) return pct(lane ? 300 : 720, 175 + t * 80);
+  if (stateCode === 1) return pct(lane ? 200 : 800, 120 + t * 80);
   if (stateCode === 2) {
-    if (index === 0) return { left: "40%", top: "58%" };
-    return index % 2 === 1 ? { left: "68%", top: "76%" } : { left: "78%", top: "88%" };
+    const cab = cabBox();
+    if (index === 0) return pct(cab.x - 78, cab.y + cab.h / 2);
+    return index % 2 === 1 ? pct(280, 610) : pct(720, 610);
   }
-  return { left: `${12 + (index % 4) * 12}%`, top: "4%" };
+  return pct(90 + (index % 5) * 78, 28);
+}
+
+function ZoneLayer({ showMiner }: { showMiner: boolean }) {
+  return (
+    <svg className="zone-layer" viewBox={`0 0 ${VIEW.w} ${VIEW.h}`} preserveAspectRatio="none" aria-hidden="true">
+      <path d={zonePath(1)} fill="#3aaa472e" stroke="#56cf61" strokeWidth="3" />
+      <path d={zonePath(0.86)} fill="#f2a51d30" stroke="#f2a51d" strokeWidth="3" />
+      <path d={zonePath(0.72)} fill="#d9414136" stroke="#e34b4b" strokeWidth="3" />
+      {showMiner && (
+        <>
+          <ellipse cx="280" cy="612" rx="72" ry="46" fill="#1f9d4a40" stroke="#7df0b0" strokeWidth="3" strokeDasharray="8 6" />
+          <ellipse cx="720" cy="612" rx="72" ry="46" fill="#1f9d4a40" stroke="#7df0b0" strokeWidth="3" strokeDasharray="8 6" />
+          <text x="280" y="558" textAnchor="middle" fontSize="14">SILENT</text>
+          <text x="720" y="558" textAnchor="middle" fontSize="14">SILENT</text>
+        </>
+      )}
+      <text x="250" y="95" fontSize="16" letterSpacing="1">MONITOR</text>
+      <text x="250" y="113" fontSize="12">&gt; 8 m</text>
+      <text x="330" y="160" fontSize="16" letterSpacing="1">WARNING</text>
+      <text x="330" y="178" fontSize="12">5 – 8 m</text>
+      <text x="640" y="250" fontSize="16" letterSpacing="1">HAZARD</text>
+      <text x="640" y="268" fontSize="12">0 – 5 m</text>
+    </svg>
+  );
 }
 
 export function MapPage() {
@@ -110,17 +205,10 @@ export function MapPage() {
         <h1>Live PDS monitor</h1>
         <h2>Shuttle Car and Continuous Miner</h2>
         <div className="scene">
-          <div className="zone zone-monitor"><span>Monitor</span></div>
-          <div className="zone zone-warning"><span>Warning</span></div>
-          <div className="zone zone-hazard"><span>Hazard</span></div>
-          <div className="zone zone-silent"><span>Silent</span></div>
-          <MachineArt src="/machines/shuttle-car.svg" className={`machine-art shuttle ${brakeClass}`} />
+          <ZoneLayer showMiner={silent.length > 0} />
+          <MachineArt src="/machines/shuttle-car.svg?cab=1" className={`machine-art shuttle ${brakeClass}`} style={boxStyle(CAR)} />
           {silent.length > 0 && (
-            <>
-              <div className="zone zone-cm-a"><span>Silent</span></div>
-              <div className="zone zone-cm-b"><span>Silent</span></div>
-              <MachineArt src="/machines/continuous-miner.svg" className="machine-art miner" />
-            </>
+            <MachineArt src="/machines/continuous-miner.svg" className="machine-art miner" style={boxStyle(MINER)} />
           )}
           {[...grouped.entries()].flatMap(([state, list]) =>
             list.map((pad, index) => (
@@ -136,8 +224,8 @@ export function MapPage() {
           )}
         </div>
         <p className="notice">
-          Logical zones only. PAD markers are placed in the zone reported by MQTT. They are not surveyed X/Y positions.
-          The Continuous Miner is shown while any PAD is Silent, with its tail toward the Shuttle Car.
+          Detection zones follow the shuttle-car peanut outline. The green Silent zone is the operator cab only and does not extend past it.
+          PAD markers sit in the MQTT-reported zone and are not surveyed X/Y positions. The Continuous Miner appears while any PAD is Silent, tail toward the Shuttle Car, with its two Silent bubbles.
         </p>
       </section>
       <aside>

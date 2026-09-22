@@ -101,33 +101,20 @@ aside { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflo
   border: 1px solid #315164;
   border-radius: 7px;
   padding: 12px;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background:
     linear-gradient(#0a1820cc, #07141bcc),
     repeating-linear-gradient(45deg, #101d22, #101d22 12px, #0c181e 12px, #0c181e 24px);
 }
 .map h1 { margin: 0; font-size: 24px; }
 .map h2 { margin: 2px 0 8px; color: #b8d0dc; font-weight: 400; font-size: 16px; }
-.scene { position: relative; height: calc(100% - 120px); min-height: 460px; }
-.zone {
-  position: absolute;
-  border-radius: 50%;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-.zone span { margin-top: 8px; }
-.zone-monitor { width: 68%; height: 46%; left: 4%; top: 8%; background: #3aaa4730; border: 2px solid #56cf61; }
-.zone-warning { width: 52%; height: 34%; left: 12%; top: 16%; background: #f2a51d32; border: 2px solid #f2a51d; }
-.zone-hazard { width: 36%; height: 24%; left: 20%; top: 24%; background: #d9414138; border: 2px solid #e34b4b; }
-.zone-silent { width: 24%; height: 14%; left: 26%; top: 52%; background: #087dcc33; border: 2px dashed #39b4ff; }
-.zone-cm-a { width: 16%; height: 10%; left: 58%; top: 70%; background: #087dcc33; border: 2px dashed #39b4ff; }
-.zone-cm-b { width: 16%; height: 10%; left: 70%; top: 84%; background: #087dcc33; border: 2px dashed #39b4ff; }
-.machine-art { position: absolute; }
-.machine-art svg { width: 100%; height: 100%; }
-.shuttle { left: 30%; top: 28%; width: 18%; height: 34%; }
-.miner { left: 60%; top: 62%; width: 22%; height: 34%; }
+.scene { position: relative; flex: 1; min-height: 460px; }
+.zone-layer { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+.zone-layer text { font-family: "Segoe UI", Arial, sans-serif; font-weight: 700; fill: #f4f8fb; }
+.machine-art { position: absolute; z-index: 1; }
+.machine-art svg { width: 100%; height: 100%; display: block; }
 .brake-off .machine-body { fill: #1f9d4a; }
 .brake-on .machine-body { fill: #087ad1; }
 .brake-unknown .machine-body { fill: #607887; }
