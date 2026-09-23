@@ -10,6 +10,10 @@ import {
 import { derivedPds } from "../core/engine";
 import { formatClock, formatDuration, padStateName, parkingBrakeLabel } from "../core/padState";
 import { useMonitor } from "../state/monitor";
+import {
+  formatMachineLabel, formatPadLabel, loadLabelModes, loadMachineAssignments, loadPadAssignments,
+  saveLabelModes, saveMachineAssignment, savePadAssignment, type LabelMode,
+} from "../core/assignments";
 import type { PadLive } from "../core/types";
 
 function meterBox(box: { x: number; y: number; w: number; h: number }): CSSProperties {
@@ -77,6 +81,17 @@ function ZoneLayer({ showMiner }: { showMiner: boolean }) {
 
 export function MapPage() {
   const { snap, selectedController, setSelectedController } = useMonitor();
+  const [padAssignments, setPadAssignments] = useState(loadPadAssignments);
+  const [machineAssignments, setMachineAssignments] = useState(loadMachineAssignments);
+  const [labelModes, setLabelModes] = useState(loadLabelModes);
+  const [editPad, setEditPad] = useState("");
+  const [editMachine, setEditMachine] = useState("");
+
+  function updateModes(kind: "pad" | "machine", value: LabelMode) {
+    const next = { ...labelModes, [kind]: value };
+    setLabelModes(next);
+    saveLabelModes(next);
+  }
   const controller =
     snap.controllers.find((item) => item.controllerId === selectedController) ?? snap.controllers[0] ?? null;
   const pads = snap.pads.filter((pad) => !controller || pad.controllerId === controller.controllerId);
@@ -103,13 +118,13 @@ export function MapPage() {
             >
               {snap.controllers.map((item) => (
                 <option key={item.controllerId} value={item.controllerId}>
-                  {item.controllerId}
+                  {formatMachineLabel(item.controllerId, machineAssignments[item.controllerId], labelModes.machine)}
                 </option>
               ))}
             </select>
           )}
           <p>
-            Controller ID <b>{controller?.controllerId ?? "—"}</b>
+            Controller <b>{controller ? formatMachineLabel(controller.controllerId, machineAssignments[controller.controllerId], labelModes.machine) : "—"}</b>
           </p>
           <p>
             Firmware <b>{controller?.firmware ?? "—"}</b>
@@ -117,7 +132,20 @@ export function MapPage() {
           <p>
             Last MQTT <b>{formatClock(controller?.lastSeenMs)}</b>
           </p>
-          <small>Firmware is decoded from proximity/21. Other controller arrays stay unmapped.</small>
+          {controller && (
+            <div className="assignment-row">
+              <input value={editMachine} onChange={(e) => setEditMachine(e.target.value)} placeholder="Machine name / ID" />
+              <button type="button" onClick={() => {
+                saveMachineAssignment({ controllerId: controller.controllerId, machineId: editMachine, machineName: editMachine });
+                setMachineAssignments(loadMachineAssignments());
+                setEditMachine("");
+              }}>Assign</button>
+            </div>
+          )}
+          <label className="label-mode">Display <select value={labelModes.machine} onChange={(e) => updateModes("machine", e.target.value as LabelMode)}>
+            <option value="id">ID only</option><option value="name">Name only</option><option value="both">Both</option>
+          </select></label>
+          <small>Aliases are local labels only. The immutable MQTT controller ID remains the source identity.</small>
         </div>
         <div className="panel">
           <h3>Machine status</h3>
@@ -163,7 +191,7 @@ export function MapPage() {
                 className={`marker state ${padStateName(state).toLowerCase()}`}
                 style={markerStyle(state, index)}
               >
-                PAD {pad.displayId}
+                {formatPadLabel(pad.displayId, padAssignments[pad.displayId], labelModes.pad)}
                 <small>{padStateName(state)}</small>
               </div>
             )),
@@ -177,9 +205,23 @@ export function MapPage() {
       <aside>
         <div className="panel pads">
           <h3>Detected PADs ({pads.length})</h3>
+          <label className="label-mode">Display <select value={labelModes.pad} onChange={(e) => updateModes("pad", e.target.value as LabelMode)}>
+            <option value="id">ID only</option><option value="name">Name only</option><option value="both">Both</option>
+          </select></label>
           {pads.map((pad) => (
             <div className="pad" key={pad.displayId}>
-              <b>PAD {pad.displayId}</b>
+              <b>{formatPadLabel(pad.displayId, padAssignments[pad.displayId], labelModes.pad)}</b>
+              <div className="assignment-row">
+                <input value={editPad.startsWith(`${pad.displayId}:`) ? editPad.slice(editPad.indexOf(":") + 1) : ""} onChange={(e) => setEditPad(`${pad.displayId}:${e.target.value}`)} placeholder="Assign person name" />
+                <button type="button" onClick={() => {
+                  const name = editPad.startsWith(`${pad.displayId}:`) ? editPad.slice(editPad.indexOf(":") + 1).trim() : "";
+                  if (name) {
+                    savePadAssignment({ padId: pad.displayId, name });
+                    setPadAssignments(loadPadAssignments());
+                    setEditPad("");
+                  }
+                }}>Assign</button>
+              </div>
               <span className={`state ${padStateName(pad.stateCode).toLowerCase()}`}>{padStateName(pad.stateCode)}</span>
               <small>
                 Battery {pad.batteryV?.toFixed(2) ?? "—"} V · in state {formatDuration(snap.asOfMs - pad.stateSinceMs)}
