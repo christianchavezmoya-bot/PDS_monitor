@@ -21,7 +21,16 @@ const LABEL_KEY = "shr-pds-label-modes";
 function read<T>(key: string, fallback: T): T {
   try {
     const raw = localStorage.getItem(key);
-    return raw ? { ...fallback, ...JSON.parse(raw) } : fallback;
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw) as T;
+    if (
+      typeof fallback === "object" && fallback !== null &&
+      typeof parsed === "object" && parsed !== null &&
+      !Array.isArray(fallback) && !Array.isArray(parsed)
+    ) {
+      return { ...fallback, ...parsed };
+    }
+    return parsed;
   } catch {
     return fallback;
   }
