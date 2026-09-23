@@ -149,6 +149,7 @@ fn start_local_broker(state: State<AppDb>, port: u16) -> Result<String, String> 
     Ok(format!("Starting local broker on 0.0.0.0:{port}"))
 }
 
+#[tauri::command]
 fn replace_derived(state: State<AppDb>, dump: DerivedDump) -> Result<(), String> {
     let conn = state.conn.lock().map_err(|err| err.to_string())?;
     db::replace_derived(&conn, &dump).map_err(|err| err.to_string())
