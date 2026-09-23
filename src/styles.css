@@ -177,3 +177,31 @@ td small { display: block; color: #8eabba; }
   .dashboard { grid-template-columns: 1fr; height: auto; }
   nav button { font-size: 0; padding: 8px; }
 }
+
+.network-setup {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(210px, 280px) auto auto minmax(280px, 1fr);
+  gap: 10px;
+  align-items: end;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #315164;
+  border-radius: 8px;
+  background: #0b202cdd;
+}
+.network-setup h3 { margin: 0 0 4px; }
+.network-setup p { margin: 0; }
+.network-setup label { display: flex; flex-direction: column; gap: 6px; color: #9db6c5; }
+.network-result { display: flex; flex-direction: column; gap: 3px; color: #9db6c5; }
+.network-result b, .network-result strong { color: #eef7fb; }
+.telemetry-warning {
+  padding: 10px 12px;
+  border: 1px solid #d4972b;
+  border-radius: 7px;
+  background: #2a1c08ee;
+  color: #ffc14d;
+}
+@media (max-width: 1250px) {
+  .network-setup { grid-template-columns: 1fr 1fr; }
+  .network-result { grid-column: 1 / -1; }
+}
