@@ -42,8 +42,6 @@ fn list_raw(state: State<AppDb>, query: RawQuery) -> Result<Vec<RawMessage>, Str
     db::list_raw(&conn, &query).map_err(|err| err.to_string())
 }
 
-#[tauri::command]
-
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 struct NetworkAdapter {
