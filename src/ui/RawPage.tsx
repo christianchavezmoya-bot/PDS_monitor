@@ -1,14 +1,49 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { decodeMqtt, describeDecode } from "../core/decoder";
 import { downloadText, rawToCsv, rawToJsonl } from "../core/export";
 import { formatClock } from "../core/padState";
 import { useMonitor } from "../state/monitor";
+import { diagnoseNetwork, listNetworkAdapters, startLocalBroker, type NetworkAdapter, type NetworkDiagnostic } from "../data/tauriBridge";
 
 export function RawPage() {
   const { engine, snap, settings, setSettings, status, tauri, importText, mode } = useMonitor();
   const [topic, setTopic] = useState("");
   const [text, setText] = useState("");
   const [family, setFamily] = useState("all");
+  const [pdsIp, setPdsIp] = useState(() => localStorage.getItem("shr-pds-controller-ip") || "192.168.1.1");
+  const [adapters, setAdapters] = useState<NetworkAdapter[]>([]);
+  const [diagnostic, setDiagnostic] = useState<NetworkDiagnostic | null>(null);
+  const [networkBusy, setNetworkBusy] = useState(false);
+  const [brokerMessage, setBrokerMessage] = useState("");
+
+  useEffect(() => {
+    if (!tauri) return;
+    void listNetworkAdapters().then(setAdapters);
+  }, [tauri]);
+
+  async function runDiagnostic() {
+    setNetworkBusy(true);
+    localStorage.setItem("shr-pds-controller-ip", pdsIp);
+    try {
+      setAdapters(await listNetworkAdapters());
+      setDiagnostic(await diagnoseNetwork(pdsIp, settings));
+    } finally {
+      setNetworkBusy(false);
+    }
+  }
+
+  async function startBroker() {
+    setNetworkBusy(true);
+    try {
+      setBrokerMessage(await startLocalBroker(settings.port));
+      await new Promise((resolve) => window.setTimeout(resolve, 800));
+      setDiagnostic(await diagnoseNetwork(pdsIp, settings));
+    } catch (error) {
+      setBrokerMessage(String(error));
+    } finally {
+      setNetworkBusy(false);
+    }
+  }
   const rows = engine.rawMessages();
   const filtered = useMemo(
     () =>
@@ -23,6 +58,28 @@ export function RawPage() {
 
   return (
     <main className="page">
+      <section className="network-setup">
+        <div>
+          <h3>Field Network Setup</h3>
+          <p className="hint">Validated recorder workflow: arbitrary IPv4 networks, PDS subnet check, local broker check, and the PC MQTT target to enter in the PDS.</p>
+        </div>
+        <label>
+          PDS Controller IP
+          <input value={pdsIp} onChange={(e) => setPdsIp(e.target.value)} placeholder="e.g. 192.168.1.1" />
+        </label>
+        <button type="button" disabled={!tauri || networkBusy} onClick={runDiagnostic}>
+          {networkBusy ? "Testing..." : "Run Full Diagnostic"}
+        </button>
+        <button type="button" disabled={!tauri || networkBusy} onClick={startBroker}>Start Local Broker</button>
+        <div className="network-result">
+          <b>{diagnostic?.detail ?? (tauri ? "Not tested" : "Available in the Windows app")}</b>
+          {diagnostic?.adapter && <span>Adapter: {diagnostic.adapter.name} — {diagnostic.adapter.ipv4}/{diagnostic.adapter.subnet}</span>}
+          {diagnostic?.mqttTarget && <span>PDS MQTT target: <strong>{diagnostic.mqttTarget}</strong></span>}
+          {diagnostic && <span>Subnet {diagnostic.sameSubnet ? "✓" : "✗"} · PDS {diagnostic.pdsReachable ? "✓" : "✗"} · Broker {diagnostic.brokerReachable ? "✓" : "✗"}</span>}
+          {brokerMessage && <span>{brokerMessage}</span>}
+          <small>{adapters.length ? `${adapters.length} active IPv4 adapter(s) detected.` : ""}</small>
+        </div>
+      </section>
       <section className="toolbar">
         <label>
           Host
@@ -67,6 +124,9 @@ export function RawPage() {
           />
         </label>
       </section>
+      {status.state === "connected" && snap.rawCount > 0 && !rows.some((row) => row.topic.includes("strata/v1/proximity/")) && (
+        <p className="telemetry-warning">MQTT connected, but no PDS proximity telemetry detected. Check PDS RTC/time configuration and controller status.</p>
+      )}
       <p className="hint">
         Every MQTT payload is stored before decoding. {snap.rawCount} messages in this session, {snap.decodeErrors} decode
         notes, {snap.unknownTopics} unknown topics.{" "}
