@@ -205,3 +205,9 @@ td small { display: block; color: #8eabba; }
   .network-setup { grid-template-columns: 1fr 1fr; }
   .network-result { grid-column: 1 / -1; }
 }
+
+.assignment-row { display: flex; gap: 6px; margin: 7px 0; }
+.assignment-row input { min-width: 0; flex: 1; }
+.assignment-row button { padding: 5px 8px; }
+.label-mode { display: flex; gap: 7px; align-items: center; margin: 7px 0; color: #9db6c5; font-size: 12px; }
+.label-mode select { flex: 1; }
