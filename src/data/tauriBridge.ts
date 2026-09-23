@@ -59,3 +59,42 @@ export async function startMqtt(
     unlistenMessage();
   };
 }
+
+
+export interface NetworkAdapter {
+  name: string;
+  ipv4: string;
+  subnet: string;
+  gateway?: string;
+}
+
+export interface NetworkDiagnostic {
+  pdsIp: string;
+  adapter?: NetworkAdapter;
+  sameSubnet: boolean;
+  pdsReachable: boolean;
+  brokerReachable: boolean;
+  mqttTarget?: string;
+  detail: string;
+}
+
+export async function listNetworkAdapters(): Promise<NetworkAdapter[]> {
+  if (!isTauri()) return [];
+  return invoke<NetworkAdapter[]>("list_network_adapters");
+}
+
+export async function diagnoseNetwork(pdsIp: string, settings: MqttSettings): Promise<NetworkDiagnostic> {
+  if (!isTauri()) {
+    return { pdsIp, sameSubnet: false, pdsReachable: false, brokerReachable: false, detail: "Network diagnostics run in the Windows app." };
+  }
+  return invoke<NetworkDiagnostic>("diagnose_network", {
+    pdsIp,
+    brokerHost: settings.host,
+    brokerPort: settings.port,
+  });
+}
+
+export async function startLocalBroker(port: number): Promise<string> {
+  if (!isTauri()) return "Local broker control runs in the Windows app.";
+  return invoke<string>("start_local_broker", { port });
+}
