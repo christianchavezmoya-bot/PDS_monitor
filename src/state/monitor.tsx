@@ -65,6 +65,7 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
   const playList = useRef<RawMqttMessage[]>([]);
   const playIndex = useRef(0);
   const timer = useRef<number | null>(null);
+  const replayGeneration = useRef(0);
   const modeRef = useRef<"live" | "replay">("live");
   const controllerPinned = useRef(false);
   const speedRef = useRef<ReplaySpeed>(10);
@@ -106,7 +107,8 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
     publish();
   }, [publish]);
 
-  const step = useCallback(() => {
+  const step = useCallback((generation?: number) => {
+    if (generation !== undefined && generation !== replayGeneration.current) return;
     const messages = playList.current;
     const cursor = playIndex.current;
     if (modeRef.current !== "replay" || cursor >= messages.length) {
@@ -121,7 +123,7 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
       setIndex(end);
       publish();
       if (end >= messages.length) finishPlayback();
-      else timer.current = window.setTimeout(step, 0);
+      else timer.current = window.setTimeout(() => step(replayGeneration.current), 0);
       return;
     }
     engineRef.current.ingest(messages[cursor]);
@@ -134,12 +136,14 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
       return;
     }
     const delay = replayDelayMs(messages[cursor].receivedAtMs, messages[next].receivedAtMs, speedNow);
-    timer.current = window.setTimeout(step, delay);
+    timer.current = window.setTimeout(() => step(replayGeneration.current), delay);
   }, [finishPlayback, publish]);
 
   const beginReplay = useCallback(
     (messages: RawMqttMessage[], replayLabel: string) => {
       clearTimer();
+      replayGeneration.current += 1;
+      const generation = replayGeneration.current;
       modeRef.current = "replay";
       setMode("replay");
       engineRef.current.reset();
@@ -151,16 +155,21 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
       if (messages[0]) setSelectedDay(dayKey(messages[0].receivedAtMs));
       setPlaying(true);
       publish();
-      timer.current = window.setTimeout(step, 0);
+      timer.current = window.setTimeout(() => step(generation), 0);
     },
     [publish, step],
   );
 
   const stopReplay = useCallback(() => {
+    replayGeneration.current += 1;
     clearTimer();
     modeRef.current = "live";
     setMode("live");
     setPlaying(false);
+    playList.current = [];
+    playIndex.current = 0;
+    setIndex(0);
+    setTotal(0);
     setLabel("");
     engineRef.current.reset();
     engineRef.current.ingestAll(liveLog.current);
@@ -176,7 +185,8 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
     }
     if (playIndex.current >= playList.current.length) playIndex.current = 0;
     setPlaying(true);
-    timer.current = window.setTimeout(step, 0);
+    const generation = replayGeneration.current;
+    timer.current = window.setTimeout(() => step(generation), 0);
   }, [playing, step]);
 
   const setSpeed = useCallback((next: ReplaySpeed) => {
