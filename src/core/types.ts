@@ -124,6 +124,15 @@ export interface StateInterval {
   endMs: number | null;
 }
 
+export interface ParkingBrakeInterval {
+  controllerId: number;
+  /** 1 = Parking Brake Release ON (machine able to move), 0 = applied. */
+  released: boolean;
+  startMs: number;
+  endMs: number | null;
+  rawMessageId?: number;
+}
+
 export interface InteractionEvent {
   id: string;
   controllerId: number;
@@ -157,5 +166,6 @@ export interface EngineSnapshot {
   generators: GeneratorLive[];
   transitions: StateTransition[];
   intervals: StateInterval[];
+  parkingBrakeIntervals: ParkingBrakeInterval[];
   events: InteractionEvent[];
 }
