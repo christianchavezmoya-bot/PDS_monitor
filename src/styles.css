@@ -316,3 +316,10 @@ td small { display: block; color: #8eabba; }
 
 .trend-lag-marker.silent-hazard-lag { border-left-style:solid; border-left-color:#58aee8; }
 .trend-lag-marker.silent-hazard-lag span { color:#bfe5ff; }
+
+.trend-layer-presets { display:inline-flex; gap:4px; }
+.trend-layer-presets button { padding:4px 7px; font-size:10px; }
+.trend-overview { display:grid; grid-template-columns:42px 1fr 42px; align-items:center; gap:7px; color:#8eabba; font:10px Consolas,monospace; cursor:pointer; }
+.trend-overview-track { position:relative; height:18px; border:1px solid #315164; border-radius:4px; background:#07141c; overflow:hidden; }
+.trend-overview-track::before { content:""; position:absolute; inset:0; background:repeating-linear-gradient(90deg,transparent 0,transparent calc(25% - 1px),#274657 calc(25% - 1px),#274657 25%); }
+.trend-overview-track i { position:absolute; top:2px; bottom:2px; min-width:4px; border:1px solid #7ed6ff; border-radius:3px; background:#087dcc55; z-index:1; }
