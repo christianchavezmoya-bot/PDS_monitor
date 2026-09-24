@@ -6,6 +6,7 @@ import { parseJsonl } from "../core/export";
 import { dayKey } from "../core/padState";
 import { openBundledVisit, replayDelayMs, type ReplaySpeed } from "../core/replay";
 import type { EngineSnapshot, RawMqttMessage } from "../core/types";
+import { hydrateAssignmentsFromSqlite } from "../core/assignments";
 import { isTauri, loadRecordedMessages, persistRaw, saveDerived, startMqtt, type MqttSettings, type MqttStatus } from "../data/tauriBridge";
 
 export type PageId = "raw" | "live" | "summary" | "report";
@@ -201,6 +202,7 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       if (!isTauri()) return;
+      await hydrateAssignmentsFromSqlite();
       const recorded = await loadRecordedMessages();
       if (cancelled) return;
       liveLog.current = recorded;
