@@ -86,7 +86,7 @@ export function TrendingPage() {
     .find(event => {
       const intervalEnd=item.endMs??snap.asOfMs;
       const eventEnd=event.endMs??snap.asOfMs;
-      return event.startMs < intervalEnd && eventEnd > item.startMs;
+      return event.startMs < intervalEnd && eventEnd >= item.startMs;
     });
   const intervalPadLabel = (item: StateInterval) => {
     const historical=historicalEventForInterval(item);
@@ -101,7 +101,7 @@ export function TrendingPage() {
       : formatMachineLabel(item.controllerId,machines[item.controllerId],"both");
   };
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest("button")) return;
+    if ((e.target as HTMLElement).closest(".trend-event")) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     drag.current={x:e.clientX,end:effectiveEnd,pointerId:e.pointerId};
   };
@@ -136,10 +136,10 @@ export function TrendingPage() {
 
     <section className="trend-options panel">
       <div><b>Event layers</b>
-        {(["parkingBrake","silent","warning","hazard","generator"] as Layer[]).map(layer=><button type="button" key={layer} className={layers[layer]?"trend-toggle active":"trend-toggle"} aria-pressed={layers[layer]} onClick={()=>setLayers(v=>({...v,[layer]:!v[layer]}))}>{layers[layer]?"✓":"○"} {layer==="generator"?"Generator events*":layer==="parkingBrake"?"PARKING BRAKE RELEASED":layer.toUpperCase()}</button>)}
-        <button type="button" className={showPeople?"trend-toggle active":"trend-toggle"} aria-pressed={showPeople} onClick={()=>setShowPeople(v=>!v)}>{showPeople?<Eye/>:<EyeOff/>}PAD / person</button>
-        <button type="button" className={showLabels?"trend-toggle active":"trend-toggle"} aria-pressed={showLabels} onClick={()=>setShowLabels(v=>!v)}>{showLabels?"✓":"○"} Event labels</button>
-        <span className="trend-layer-presets"><button onClick={()=>setLayerPreset("all")}>Show All</button><button onClick={()=>setLayerPreset("safety")}>Safety Only</button><button onClick={()=>setLayerPreset("clear")}>Clear</button></span>
+        {(["parkingBrake","silent","warning","hazard","generator"] as Layer[]).map(layer=><button type="button" key={layer} className={layers[layer]?"trend-toggle active":"trend-toggle"} aria-pressed={layers[layer]} onPointerDown={e=>e.stopPropagation()} onClick={()=>setLayers(v=>({...v,[layer]:!v[layer]}))}>{layers[layer]?"✓":"○"} {layer==="generator"?"Generator events*":layer==="parkingBrake"?"PARKING BRAKE RELEASED":layer.toUpperCase()}</button>)}
+        <button type="button" className={showPeople?"trend-toggle active":"trend-toggle"} aria-pressed={showPeople} onPointerDown={e=>e.stopPropagation()} onClick={()=>setShowPeople(v=>!v)}>{showPeople?<Eye/>:<EyeOff/>}PAD / person</button>
+        <button type="button" className={showLabels?"trend-toggle active":"trend-toggle"} aria-pressed={showLabels} onPointerDown={e=>e.stopPropagation()} onClick={()=>setShowLabels(v=>!v)}>{showLabels?"✓":"○"} Event labels</button>
+        <span className="trend-layer-presets"><button onPointerDown={e=>e.stopPropagation()} onClick={()=>setLayerPreset("all")}>Show All</button><button onPointerDown={e=>e.stopPropagation()} onClick={()=>setLayerPreset("safety")}>Safety Only</button><button onPointerDown={e=>e.stopPropagation()} onClick={()=>setLayerPreset("clear")}>Clear</button></span>
         <small>* Generator Low Voltage / Communication Error remain unvalidated and are not synthesized.</small>
       </div>
       <div className="trend-machines"><b>Machines ({activeIds.length}/10)</b>{controllerIds.map(id=><label key={id}><input type="checkbox" checked={activeIds.includes(id)} onChange={()=>toggleMachine(id)} />{formatMachineLabel(id,machines[id],"both")}</label>)}</div>
@@ -166,7 +166,7 @@ export function TrendingPage() {
             const right=Math.min(100,pct(item.endMs??snap.asOfMs,startMs,windowMs));
             const width=Math.max(.25,right-left);
             const label=padStateName(item.stateCode);
-            return <button key={`${id}-${item.padDisplayId}-${item.startMs}-${index}`} className={`trend-event trend-${layer}`} style={{left:`${left}%`,width:`${width}%`}} onClick={e=>{e.stopPropagation();setSelected(item);}} onDoubleClick={e=>{e.stopPropagation();setEndMs((item.endMs??snap.asOfMs)+15000);setWindowMs(clampWindow(Math.max(60000,(item.endMs??snap.asOfMs)-item.startMs+30000)));setFollowNow(false);}} title={`${label} · ${formatDuration((item.endMs??snap.asOfMs)-item.startMs)}`}>
+            return <button key={`${id}-${item.padDisplayId}-${item.startMs}-${index}`} className={`trend-event trend-${layer}`} style={{left:`${left}%`,width:`${width}%`}} onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();setSelected(item);}} onDoubleClick={e=>{e.stopPropagation();setEndMs((item.endMs??snap.asOfMs)+15000);setWindowMs(clampWindow(Math.max(60000,(item.endMs??snap.asOfMs)-item.startMs+30000)));setFollowNow(false);}} title={`${label} · ${formatDuration((item.endMs??snap.asOfMs)-item.startMs)}`}>
               {showLabels && <span>{label}</span>}{showPeople && width>7 && <small>{intervalPadLabel(item)}</small>}
             </button>;
           })}
