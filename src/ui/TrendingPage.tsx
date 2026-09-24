@@ -45,6 +45,7 @@ export function TrendingPage() {
   const effectiveEnd = followNow && mode === "live" ? snap.asOfMs : endMs;
   const startMs = effectiveEnd - windowMs;
   const visible = snap.intervals.filter(i => activeIds.includes(i.controllerId) && overlaps(i, startMs, effectiveEnd, snap.asOfMs));
+  const proximityHazards = snap.events.filter(e => e.kind === "hazard" && e.fromState !== "SILENT" && e.fromState !== "WARNING" && e.hazardReactionLagMs != null);
   const ticks = Array.from({length: 7}, (_,i) => startMs + (windowMs * i / 6));
 
   const zoom = (factor: number, anchor = 0.5) => {
@@ -123,6 +124,7 @@ export function TrendingPage() {
             </button>;
           })}
         </div>)}
+        {proximityHazards.filter(e=>activeIds.includes(e.controllerId) && e.startMs>=startMs && e.startMs<=effectiveEnd).map(e=><div key={`lag-${e.id}`} className="trend-lag-marker" style={{left:`${pct(e.startMs,startMs,windowMs)}%`}} title={`Proximity Hazard reaction: ${((e.hazardReactionLagMs??0)/1000).toFixed(2)} s`}><span>{((e.hazardReactionLagMs??0)/1000).toFixed(2)}s</span></div>)}
         {hover && <div className="trend-crosshair" style={{left:hover.x}}><span>{formatClock(hover.at)}</span></div>}
       </div>
     </section>
