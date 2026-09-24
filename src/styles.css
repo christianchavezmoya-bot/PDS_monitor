@@ -309,3 +309,7 @@ td small { display: block; color: #8eabba; }
 .trend-brake-release { position:absolute; inset-block:5px; min-width:3px; border-radius:4px; background:#23883a52; border:1px solid #56cf6159; z-index:1; overflow:hidden; pointer-events:none; }
 .trend-brake-release span { position:absolute; left:6px; bottom:2px; color:#9de6a7; font-size:8px; font-weight:800; letter-spacing:.35px; opacity:.72; white-space:nowrap; }
 .trend-event { z-index:2; }
+
+.trend-lag-marker { position:absolute; top:0; bottom:0; width:1px; border-left:1px dashed #f2f6f8; z-index:3; pointer-events:none; }
+.trend-lag-marker span { position:absolute; top:2px; left:3px; padding:2px 4px; border-radius:3px; background:#07141cdd; color:#fff; font:800 9px Consolas,monospace; white-space:nowrap; }
+.summary-event time small { color:#ffd0d0; font-weight:800; }
