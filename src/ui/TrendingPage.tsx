@@ -35,6 +35,7 @@ export function TrendingPage() {
   const [selectedMachines, setSelectedMachines] = useState<number[]>([]);
   const [hover, setHover] = useState<{ x: number; at: number } | null>(null);
   const [selected, setSelected] = useState<StateInterval | null>(null);
+  const [showLabels, setShowLabels] = useState(true);
   const drag = useRef<{ x: number; end: number } | null>(null);
 
   const controllerIds = useMemo(() => [...new Set([
@@ -70,6 +71,15 @@ export function TrendingPage() {
     setEndMs(Math.min(bounds.end, bounds.start + windowMs));
     setFollowNow(false);
   };
+  const setLayerPreset = (preset: "all" | "safety" | "clear") => {
+    if (preset === "all") setLayers({ parkingBrake:true, silent:true, warning:true, hazard:true, generator:true });
+    else if (preset === "safety") setLayers({ parkingBrake:true, silent:false, warning:true, hazard:true, generator:true });
+    else setLayers({ parkingBrake:false, silent:false, warning:false, hazard:false, generator:false });
+  };
+  const day = dayBounds(selectedDay);
+  const overviewLeft = Math.max(0, Math.min(100, pct(startMs, day.start, day.end-day.start)));
+  const overviewRight = Math.max(overviewLeft, Math.min(100, pct(effectiveEnd, day.start, day.end-day.start)));
+  const overviewWidth = Math.max(.5, overviewRight-overviewLeft);
   const toggleMachine = (id:number) => {
     const base=selectedMachines.length ? selectedMachines : controllerIds.slice(0,10);
     setSelectedMachines(base.includes(id) ? base.filter(x=>x!==id) : [...base,id].slice(0,10));
@@ -90,6 +100,8 @@ export function TrendingPage() {
       <div><b>Event layers</b>
         {(["parkingBrake","silent","warning","hazard","generator"] as Layer[]).map(layer=><label key={layer}><input type="checkbox" checked={layers[layer]} onChange={()=>setLayers(v=>({...v,[layer]:!v[layer]}))}/>{layer==="generator"?"Generator events*":layer==="parkingBrake"?"PARKING BRAKE RELEASED":layer.toUpperCase()}</label>)}
         <label><input type="checkbox" checked={showPeople} onChange={()=>setShowPeople(v=>!v)}/>{showPeople?<Eye/>:<EyeOff/>}PAD / person</label>
+        <label><input type="checkbox" checked={showLabels} onChange={()=>setShowLabels(v=>!v)}/>Event labels</label>
+        <span className="trend-layer-presets"><button onClick={()=>setLayerPreset("all")}>Show All</button><button onClick={()=>setLayerPreset("safety")}>Safety Only</button><button onClick={()=>setLayerPreset("clear")}>Clear</button></span>
         <small>* Generator Low Voltage / Communication Error remain unvalidated and are not synthesized.</small>
       </div>
       <div className="trend-machines"><b>Machines ({activeIds.length}/10)</b>{controllerIds.map(id=><label key={id}><input type="checkbox" checked={activeIds.includes(id)} onChange={()=>toggleMachine(id)} />{formatMachineLabel(id,machines[id],"both")}</label>)}</div>
@@ -120,8 +132,8 @@ export function TrendingPage() {
             const right=Math.min(100,pct(item.endMs??snap.asOfMs,startMs,windowMs));
             const width=Math.max(.25,right-left);
             const label=padStateName(item.stateCode);
-            return <button key={`${id}-${item.padDisplayId}-${item.startMs}-${index}`} className={`trend-event trend-${layer}`} style={{left:`${left}%`,width:`${width}%`}} onClick={e=>{e.stopPropagation();setSelected(item);}} title={`${label} · ${formatDuration((item.endMs??snap.asOfMs)-item.startMs)}`}>
-              <span>{label}</span>{showPeople && width>7 && <small>{formatPadLabel(item.padDisplayId,pads[item.padDisplayId],"both")}</small>}
+            return <button key={`${id}-${item.padDisplayId}-${item.startMs}-${index}`} className={`trend-event trend-${layer}`} style={{left:`${left}%`,width:`${width}%`}} onClick={e=>{e.stopPropagation();setSelected(item);}} onDoubleClick={e=>{e.stopPropagation();setEndMs((item.endMs??snap.asOfMs)+15000);setWindowMs(clampWindow(Math.max(60000,(item.endMs??snap.asOfMs)-item.startMs+30000)));setFollowNow(false);}} title={`${label} · ${formatDuration((item.endMs??snap.asOfMs)-item.startMs)}`}>
+              {showLabels && <span>{label}</span>}{showPeople && width>7 && <small>{formatPadLabel(item.padDisplayId,pads[item.padDisplayId],"both")}</small>}
             </button>;
           })}
         </div>)}
@@ -131,12 +143,15 @@ export function TrendingPage() {
       </div>
     </section>
 
+    <div className="trend-overview" title="24-hour navigator" onClick={e=>{const rect=e.currentTarget.getBoundingClientRect();const at=day.start+((e.clientX-rect.left)/rect.width)*(day.end-day.start);setEndMs(at+windowMs/2);setFollowNow(false);}}>
+      <span>00:00</span><div className="trend-overview-track"><i style={{left:`${overviewLeft}%`,width:`${overviewWidth}%`}} /></div><span>24:00</span>
+    </div>
     <div className="trend-footer">
       <button onClick={()=>pan(-windowMs*.8)}>◀ Earlier</button>
       <div className="trend-range"><b>{formatClock(startMs)}</b><span> — {Math.round(windowMs/60000)} minute window — </span><b>{formatClock(effectiveEnd)}</b></div>
       <button onClick={()=>pan(windowMs*.8)}>Later ▶</button>
     </div>
 
-    {selected && <section className="panel trend-detail"><button className="trend-close" onClick={()=>setSelected(null)}>×</button><h3>{padStateName(selected.stateCode)} event</h3><p>Machine <b>{formatMachineLabel(selected.controllerId,machines[selected.controllerId],"both")}</b></p><p>PAD / person <b>{formatPadLabel(selected.padDisplayId,pads[selected.padDisplayId],"both")}</b></p><p>Start <b>{formatClock(selected.startMs)}</b></p><p>End <b>{selected.endMs?formatClock(selected.endMs):"Open / current"}</b></p><p>Duration <b>{formatDuration((selected.endMs??snap.asOfMs)-selected.startMs)}</b></p></section>}
+    {selected && <section className="panel trend-detail"><button className="trend-close" onClick={()=>setSelected(null)}>×</button><h3>{padStateName(selected.stateCode)} event</h3><p>Machine <b>{formatMachineLabel(selected.controllerId,machines[selected.controllerId],"both")}</b></p><p>PAD / person <b>{formatPadLabel(selected.padDisplayId,pads[selected.padDisplayId],"both")}</b></p><p>Start <b>{formatClock(selected.startMs)}</b></p><p>End <b>{selected.endMs?formatClock(selected.endMs):"Open / current"}</b></p><p>Duration <b>{formatDuration((selected.endMs??snap.asOfMs)-selected.startMs)}</b></p><p>Tip <b>Double-click a bar to zoom to that event</b></p></section>}
   </main>;
 }
