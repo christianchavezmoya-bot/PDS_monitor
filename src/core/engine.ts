@@ -334,6 +334,7 @@ export class SessionEngine {
       open.toState = padStateName(pad.stateCode);
       open.sequenceTags = sequenceTags(open.journey);
       open.journeyLabel = journeyLabel(open.journey);
+      if (pad.stateCode === 5 && open.hazardReactionLagMs == null) open.hazardReactionLagMs = this.hazardReactionLag(pad.controllerId, raw.receivedAtMs);
       if (raw.id !== undefined) open.rawMessageIds.push(raw.id);
       return;
     }
@@ -348,6 +349,16 @@ export class SessionEngine {
       if (raw.id !== undefined) open.rawMessageIds.push(raw.id);
       this.openEvents.delete(key);
     }
+  }
+
+  private hazardReactionLag(controllerId: number, hazardAtMs: number): number | null {
+    const release = [...this.parkingBrakeIntervals].reverse().find(
+      (item) => item.controllerId === controllerId && item.released && item.startMs <= hazardAtMs,
+    );
+    if (!release) return null;
+    const lag = hazardAtMs - release.startMs;
+    // Correlate only a nearby release edge. Longer gaps are not evidence of system reaction time.
+    return lag >= 0 && lag <= 15_000 ? lag : null;
   }
 
   private openInteraction(pad: PadLive, fromName: string, raw: RawMqttMessage): void {
@@ -375,6 +386,7 @@ export class SessionEngine {
       rawMessageIds: raw.id !== undefined ? [raw.id] : [],
       open: true,
       sequenceTags: sequenceTags(journey),
+      hazardReactionLagMs: pad.stateCode === 5 && fromName !== "SILENT" && fromName !== "WARNING" ? this.hazardReactionLag(pad.controllerId, raw.receivedAtMs) : null,
     };
     this.events.push(event);
     this.openEvents.set(padKey(pad.controllerId, pad.displayId), event);
