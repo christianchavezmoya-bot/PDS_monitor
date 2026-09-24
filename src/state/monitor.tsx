@@ -30,6 +30,7 @@ interface MonitorContextValue {
   stopReplay: () => void;
   engine: SessionEngine;
   tauri: boolean;
+  telemetry: { state: "live" | "stale" | "waiting"; lastMessageMs: number | null; ageMs: number | null };
 }
 
 const MonitorContext = createContext<MonitorContextValue | null>(null);
@@ -79,6 +80,9 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
   const [selectedController, setSelectedController] = useState<number | null>(null);
   const [selectedDay, setSelectedDay] = useState(dayKey(Date.now()));
   const tauri = isTauri();
+  const latestTelemetryMs = mode === "live" ? (snap.controllers.length ? Math.max(...snap.controllers.map((item) => item.lastSeenMs)) : null) : null;
+  const telemetryAgeMs = latestTelemetryMs === null ? null : Math.max(0, snap.asOfMs - latestTelemetryMs);
+  const telemetry = { state: (latestTelemetryMs === null ? "waiting" : telemetryAgeMs! > 30_000 ? "stale" : "live") as "live" | "stale" | "waiting", lastMessageMs: latestTelemetryMs, ageMs: telemetryAgeMs };
 
   const publish = useCallback(() => {
     const asOf = modeRef.current === "live" ? Date.now() : undefined;
@@ -270,6 +274,7 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
       stopReplay,
       engine: engineRef.current,
       tauri,
+      telemetry,
     }),
     [
       page,
@@ -291,6 +296,9 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
       togglePlayback,
       stopReplay,
       tauri,
+      telemetry.state,
+      telemetry.lastMessageMs,
+      telemetry.ageMs,
     ],
   );
 
