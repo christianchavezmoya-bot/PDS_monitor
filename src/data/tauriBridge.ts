@@ -26,6 +26,12 @@ export async function persistRaw(message: RawMqttMessage): Promise<RawMqttMessag
   return { ...message, id };
 }
 
+export interface EventIdentitySnapshot { id:string; padNameSnapshot?:string|null; controllerNameSnapshot?:string|null; }
+export async function loadEventIdentitySnapshots(): Promise<EventIdentitySnapshot[]> {
+  if (!isTauri()) return [];
+  return invoke<EventIdentitySnapshot[]>("list_event_identity_snapshots");
+}
+
 export async function loadRecordedMessages(): Promise<RawMqttMessage[]> {
   if (!isTauri()) return [];
   return invoke<RawMqttMessage[]>("list_raw", { query: { limit: 200000 } });

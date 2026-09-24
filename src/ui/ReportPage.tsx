@@ -23,6 +23,8 @@ export function ReportPage() {
       }),
     [snap, selectedDay, selectedController, padId, kind],
   );
+  const eventPadLabel=(event:typeof events[number])=>event.padNameSnapshot ? `${event.padNameSnapshot} · PAD ${event.padDisplayId}` : formatPadLabel(event.padDisplayId,padAssignments[event.padDisplayId],"both");
+  const eventMachineLabel=(event:typeof events[number])=>event.controllerNameSnapshot ? `${event.controllerNameSnapshot} · Controller ${event.controllerId}` : formatMachineLabel(event.controllerId,machineAssignments[event.controllerId],"both");
   const selected = events.find((event) => event.id === openId) ?? null;
 
   return (
@@ -88,8 +90,8 @@ export function ReportPage() {
           <tbody>
             {events.map((event) => (
               <tr key={event.id} onClick={() => setOpenId(event.id)} className={openId === event.id ? "selected" : ""}>
-                <td>{formatPadLabel(event.padDisplayId, padAssignments[event.padDisplayId], "both")}</td>
-                <td>{formatMachineLabel(event.controllerId, machineAssignments[event.controllerId], "both")}</td>
+                <td>{eventPadLabel(event)}</td>
+                <td>{eventMachineLabel(event)}</td>
                 <td className={event.kind}>{event.kind}{event.open ? " (open)" : ""}</td>
                 <td>{formatClock(event.startMs)}</td>
                 <td>{event.endMs === null ? "open" : formatClock(event.endMs)}</td>

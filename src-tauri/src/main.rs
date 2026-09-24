@@ -150,6 +150,8 @@ fn start_local_broker(state: State<AppDb>, port: u16) -> Result<String, String> 
 }
 
 #[tauri::command]
+fn list_event_identity_snapshots(state: State<AppDb>) -> Result<Vec<db::EventIdentitySnapshot>, String> { let conn=state.conn.lock().map_err(|e|e.to_string())?; db::list_event_identity_snapshots(&conn).map_err(|e|e.to_string()) }
+#[tauri::command]
 fn list_pad_assignments(state: State<AppDb>) -> Result<Vec<PadAssignment>, String> { let conn=state.conn.lock().map_err(|e|e.to_string())?; db::list_pad_assignments(&conn).map_err(|e|e.to_string()) }
 #[tauri::command]
 fn save_pad_assignment(state: State<AppDb>, item: PadAssignment) -> Result<(), String> { let conn=state.conn.lock().map_err(|e|e.to_string())?; db::upsert_pad_assignment(&conn,&item).map_err(|e|e.to_string()) }
@@ -178,7 +180,7 @@ fn main() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![configure_mqtt, insert_raw, list_raw, replace_derived, list_network_adapters, diagnose_network, start_local_broker, list_pad_assignments, save_pad_assignment, list_machine_assignments, save_machine_assignment])
+        .invoke_handler(tauri::generate_handler![configure_mqtt, insert_raw, list_raw, replace_derived, list_network_adapters, diagnose_network, start_local_broker, list_event_identity_snapshots, list_pad_assignments, save_pad_assignment, list_machine_assignments, save_machine_assignment])
         .run(tauri::generate_context!())
         .expect("error while running SHR PDS Monitor");
 }

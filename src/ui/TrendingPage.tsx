@@ -137,8 +137,8 @@ export function TrendingPage() {
             </button>;
           })}
         </div>)}
-        {proximityHazards.filter(e=>activeIds.includes(e.controllerId) && e.startMs>=startMs && e.startMs<=effectiveEnd).map(e=><div key={`lag-${e.id}`} className="trend-lag-marker" style={{left:`${pct(e.startMs,startMs,windowMs)}%`}} title={`Proximity Hazard reaction: ${((e.hazardReactionLagMs??0)/1000).toFixed(2)} s`}><span>{((e.hazardReactionLagMs??0)/1000).toFixed(2)}s</span></div>)}
-        {silentHazards.filter(e=>activeIds.includes(e.controllerId) && e.startMs>=startMs && e.startMs<=effectiveEnd).map(e=><div key={`silent-lag-${e.id}`} className="trend-lag-marker silent-hazard-lag" style={{left:`${pct(e.startMs,startMs,windowMs)}%`}} title={`Silent → Hazard reaction: ${((e.silentHazardReactionLagMs??0)/1000).toFixed(2)} s`}><span>S→H {((e.silentHazardReactionLagMs??0)/1000).toFixed(2)}s</span></div>)}
+        {proximityHazards.filter(e=>activeIds.includes(e.controllerId) && e.startMs>=startMs && e.startMs<=effectiveEnd).map(e=><div key={`lag-${e.id}`} className="trend-lag-marker" style={{left:`${pct(e.startMs,startMs,windowMs)}%`}} title={`${e.padNameSnapshot ?? `PAD ${e.padDisplayId}`} · ${e.controllerNameSnapshot ?? `Controller ${e.controllerId}`} · Proximity Hazard reaction: ${((e.hazardReactionLagMs??0)/1000).toFixed(2)} s`}><span>{((e.hazardReactionLagMs??0)/1000).toFixed(2)}s</span></div>)}
+        {silentHazards.filter(e=>activeIds.includes(e.controllerId) && e.startMs>=startMs && e.startMs<=effectiveEnd).map(e=><div key={`silent-lag-${e.id}`} className="trend-lag-marker silent-hazard-lag" style={{left:`${pct(e.startMs,startMs,windowMs)}%`}} title={`${e.padNameSnapshot ?? `PAD ${e.padDisplayId}`} · ${e.controllerNameSnapshot ?? `Controller ${e.controllerId}`} · Silent → Hazard reaction: ${((e.silentHazardReactionLagMs??0)/1000).toFixed(2)} s`}><span>S→H {((e.silentHazardReactionLagMs??0)/1000).toFixed(2)}s</span></div>)}
         {hover && <div className="trend-crosshair" style={{left:hover.x}}><span>{formatClock(hover.at)}</span></div>}
       </div>
     </section>

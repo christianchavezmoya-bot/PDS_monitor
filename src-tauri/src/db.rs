@@ -379,6 +379,21 @@ pub fn save_settings(conn: &Connection, settings: &MqttSettings) -> rusqlite::Re
     Ok(())
 }
 
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventIdentitySnapshot {
+    pub id: String,
+    pub pad_name_snapshot: Option<String>,
+    pub controller_name_snapshot: Option<String>,
+}
+
+pub fn list_event_identity_snapshots(conn: &Connection) -> rusqlite::Result<Vec<EventIdentitySnapshot>> {
+    let mut stmt=conn.prepare("SELECT id,pad_name_snapshot,controller_name_snapshot FROM pds_events WHERE pad_name_snapshot IS NOT NULL OR controller_name_snapshot IS NOT NULL")?;
+    let rows=stmt.query_map([],|r| Ok(EventIdentitySnapshot{id:r.get(0)?,pad_name_snapshot:r.get(1)?,controller_name_snapshot:r.get(2)?}))?;
+    rows.collect()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PadAssignment { pub pad_id: i64, pub name: String, pub employee_id: Option<String>, pub notes: Option<String> }
