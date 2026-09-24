@@ -128,6 +128,8 @@ export interface InteractionEvent {
   id: string;
   controllerId: number;
   padDisplayId: number;
+  padNameSnapshot?: string | null;
+  controllerNameSnapshot?: string | null;
   kind: "warning" | "hazard";
   startMs: number;
   endMs: number | null;
