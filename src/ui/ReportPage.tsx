@@ -40,8 +40,8 @@ export function ReportPage() {
           >
             <option value="">All</option>
             {snap.controllers.map((controller) => (
-              <option key={formatMachineLabel(controller.controllerId, machineAssignments[controller.controllerId], "both")} value={controller.controllerId}>
-                {controller.controllerId}
+              <option key={controller.controllerId} value={controller.controllerId}>
+                {formatMachineLabel(controller.controllerId, machineAssignments[controller.controllerId], "both")}
               </option>
             ))}
           </select>

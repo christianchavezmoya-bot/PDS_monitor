@@ -54,7 +54,8 @@ input, select {
   border-radius: 6px;
   padding: 7px 8px;
 }
-.page { padding: 12px 16px 24px; }
+.page { padding: 12px 16px 24px; min-height: 0; }
+.page:not(.dashboard) { height: calc(100vh - 112px); overflow-y: auto; overflow-x: hidden; }
 .toolbar, .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 10px; }
 .toolbar label, .filters { flex-direction: column; align-items: flex-start; color: #9db6c5; }
 .check { flex-direction: row !important; align-items: center !important; }
