@@ -156,6 +156,8 @@ export interface InteractionEvent {
   sequenceTags: string[];
   /** For direct Proximity Hazard only: elapsed receive-time from latest Parking Brake Release edge to Hazard entry. */
   hazardReactionLagMs?: number | null;
+  /** For direct SILENT → HAZARD only: elapsed receive-time from latest Parking Brake Release edge to Hazard entry. */
+  silentHazardReactionLagMs?: number | null;
 }
 
 export interface EngineSnapshot {

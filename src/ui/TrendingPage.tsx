@@ -46,6 +46,7 @@ export function TrendingPage() {
   const startMs = effectiveEnd - windowMs;
   const visible = snap.intervals.filter(i => activeIds.includes(i.controllerId) && overlaps(i, startMs, effectiveEnd, snap.asOfMs));
   const proximityHazards = snap.events.filter(e => e.kind === "hazard" && e.fromState !== "SILENT" && e.fromState !== "WARNING" && e.hazardReactionLagMs != null);
+  const silentHazards = snap.events.filter(e => e.kind === "hazard" && e.fromState === "SILENT" && e.silentHazardReactionLagMs != null);
   const ticks = Array.from({length: 7}, (_,i) => startMs + (windowMs * i / 6));
 
   const zoom = (factor: number, anchor = 0.5) => {
@@ -125,6 +126,7 @@ export function TrendingPage() {
           })}
         </div>)}
         {proximityHazards.filter(e=>activeIds.includes(e.controllerId) && e.startMs>=startMs && e.startMs<=effectiveEnd).map(e=><div key={`lag-${e.id}`} className="trend-lag-marker" style={{left:`${pct(e.startMs,startMs,windowMs)}%`}} title={`Proximity Hazard reaction: ${((e.hazardReactionLagMs??0)/1000).toFixed(2)} s`}><span>{((e.hazardReactionLagMs??0)/1000).toFixed(2)}s</span></div>)}
+        {silentHazards.filter(e=>activeIds.includes(e.controllerId) && e.startMs>=startMs && e.startMs<=effectiveEnd).map(e=><div key={`silent-lag-${e.id}`} className="trend-lag-marker silent-hazard-lag" style={{left:`${pct(e.startMs,startMs,windowMs)}%`}} title={`Silent → Hazard reaction: ${((e.silentHazardReactionLagMs??0)/1000).toFixed(2)} s`}><span>S→H {((e.silentHazardReactionLagMs??0)/1000).toFixed(2)}s</span></div>)}
         {hover && <div className="trend-crosshair" style={{left:hover.x}}><span>{formatClock(hover.at)}</span></div>}
       </div>
     </section>

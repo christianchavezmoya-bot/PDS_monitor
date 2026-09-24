@@ -334,7 +334,13 @@ export class SessionEngine {
       open.toState = padStateName(pad.stateCode);
       open.sequenceTags = sequenceTags(open.journey);
       open.journeyLabel = journeyLabel(open.journey);
-      if (pad.stateCode === 5 && open.hazardReactionLagMs == null) open.hazardReactionLagMs = this.hazardReactionLag(pad.controllerId, raw.receivedAtMs);
+      if (pad.stateCode === 5) {
+        if (open.fromState === "SILENT" && open.silentHazardReactionLagMs == null) {
+          open.silentHazardReactionLagMs = this.hazardReactionLag(pad.controllerId, raw.receivedAtMs);
+        } else if (open.hazardReactionLagMs == null) {
+          open.hazardReactionLagMs = this.hazardReactionLag(pad.controllerId, raw.receivedAtMs);
+        }
+      }
       if (raw.id !== undefined) open.rawMessageIds.push(raw.id);
       return;
     }
@@ -387,6 +393,7 @@ export class SessionEngine {
       open: true,
       sequenceTags: sequenceTags(journey),
       hazardReactionLagMs: pad.stateCode === 5 && fromName !== "SILENT" && fromName !== "WARNING" ? this.hazardReactionLag(pad.controllerId, raw.receivedAtMs) : null,
+      silentHazardReactionLagMs: pad.stateCode === 5 && fromName === "SILENT" ? this.hazardReactionLag(pad.controllerId, raw.receivedAtMs) : null,
     };
     this.events.push(event);
     this.openEvents.set(padKey(pad.controllerId, pad.displayId), event);
