@@ -6,7 +6,7 @@ import { useMonitor } from "../state/monitor";
 import { diagnoseNetwork, listNetworkAdapters, startLocalBroker, type NetworkAdapter, type NetworkDiagnostic } from "../data/tauriBridge";
 
 export function RawPage() {
-  const { engine, snap, settings, setSettings, status, tauri, importText, mode } = useMonitor();
+  const { engine, snap, settings, setSettings, status, telemetry, tauri, importText, mode } = useMonitor();
   const [topic, setTopic] = useState("");
   const [text, setText] = useState("");
   const [family, setFamily] = useState("all");
@@ -124,8 +124,11 @@ export function RawPage() {
           />
         </label>
       </section>
-      {status.state === "connected" && snap.rawCount > 0 && !rows.some((row) => row.topic.includes("strata/v1/proximity/")) && (
-        <p className="telemetry-warning">MQTT connected, but no PDS proximity telemetry detected. Check PDS RTC/time configuration and controller status.</p>
+      {mode === "live" && status.state === "connected" && telemetry.state === "stale" && (
+        <p className="telemetry-warning">MQTT connected, but no recent PDS telemetry detected. Last controller telemetry was {Math.round((telemetry.ageMs ?? 0) / 1000)} seconds ago. Check PDS RTC/time configuration and controller status.</p>
+      )}
+      {mode === "live" && status.state === "connected" && telemetry.state === "waiting" && (
+        <p className="telemetry-warning">MQTT broker is connected, but PDS telemetry has not been detected yet. Check PDS RTC/time configuration and controller status if this persists.</p>
       )}
       <p className="hint">
         Every MQTT payload is stored before decoding. {snap.rawCount} messages in this session, {snap.decodeErrors} decode

@@ -245,3 +245,11 @@ td small { display: block; color: #8eabba; }
 .leaderboard.warning { border-color:#f2a51d; }
 .leaderboard.hazard { border-color:#e34b4b; }
 @media (max-width:900px) { .event-panels, .leaderboards { grid-template-columns:1fr; } .summary-event { grid-template-columns:1fr; } }
+
+.health-stack { display:flex; flex-direction:column; align-items:flex-end; gap:2px; white-space:nowrap; }
+.telemetry-health { font-size:10px; font-weight:800; letter-spacing:.7px; }
+.telemetry-health.live { color:#43df6c; }
+.telemetry-health.stale { color:#ffad24; animation:telemetry-stale-pulse 1.5s ease-in-out infinite; }
+.telemetry-health.waiting { color:#d7c27a; }
+@keyframes telemetry-stale-pulse { 50% { opacity:.45; } }
+@media (prefers-reduced-motion: reduce) { .telemetry-health.stale { animation:none; } }

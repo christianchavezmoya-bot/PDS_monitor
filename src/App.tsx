@@ -36,9 +36,9 @@ function Shell() {
             </button>
           ))}
         </nav>
-        <div className={`live ${monitor.status.state}`}>
-          <Activity />
-          {monitor.mode === "replay" ? `Replay ${monitor.replay.label}` : `MQTT ${monitor.status.state}`}
+        <div className="health-stack">
+          <div className={`live ${monitor.status.state}`}><Activity />{monitor.mode === "replay" ? `Replay ${monitor.replay.label}` : `MQTT ${monitor.status.state}`}</div>
+          {monitor.mode === "live" && <div className={`telemetry-health ${monitor.telemetry.state}`}>PDS TELEMETRY {monitor.telemetry.state.toUpperCase()}</div>}
         </div>
       </header>
       <div className="replaybar">
