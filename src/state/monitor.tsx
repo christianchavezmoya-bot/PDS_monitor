@@ -9,7 +9,7 @@ import type { EngineSnapshot, RawMqttMessage } from "../core/types";
 import { hydrateAssignmentsFromSqlite } from "../core/assignments";
 import { isTauri, loadRecordedMessages, persistRaw, saveDerived, startMqtt, type MqttSettings, type MqttStatus } from "../data/tauriBridge";
 
-export type PageId = "raw" | "live" | "summary" | "report";
+export type PageId = "raw" | "live" | "trending" | "summary" | "report";
 
 interface MonitorContextValue {
   page: PageId;
@@ -55,7 +55,7 @@ function readSettings(): MqttSettings {
 
 function initialPage(): PageId {
   const page = new URLSearchParams(window.location.search).get("page");
-  if (page === "raw" || page === "live" || page === "summary" || page === "report") return page;
+  if (page === "raw" || page === "live" || page === "trending" || page === "summary" || page === "report") return page;
   return "live";
 }
 
