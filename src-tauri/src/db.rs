@@ -245,7 +245,20 @@ fn opt_string(value: &Value, key: &str) -> Option<String> {
     })
 }
 
+fn assignment_snapshots(conn: &Connection, controller_id: Option<i64>, pad_id: Option<i64>) -> (Option<String>, Option<String>) {
+    let pad_name = pad_id.and_then(|id| conn.query_row("SELECT name FROM pad_assignments WHERE pad_id=?1", params![id], |r| r.get::<_,String>(0)).ok());
+    let controller_name = controller_id.and_then(|id| conn.query_row("SELECT COALESCE(NULLIF(machine_name,''), machine_id) FROM machine_assignments WHERE controller_id=?1", params![id], |r| r.get::<_,String>(0)).ok());
+    (pad_name, controller_name)
+}
+
 pub fn replace_derived(conn: &Connection, dump: &DerivedDump) -> rusqlite::Result<()> {
+    let existing_snapshots: std::collections::HashMap<String,(Option<String>,Option<String>)> = {
+        let mut map=std::collections::HashMap::new();
+        let mut stmt=conn.prepare("SELECT id,pad_name_snapshot,controller_name_snapshot FROM pds_events")?;
+        let rows=stmt.query_map([],|r| Ok((r.get::<_,String>(0)?,r.get::<_,Option<String>>(1)?,r.get::<_,Option<String>>(2)?)))?;
+        for row in rows { let (id,p,c)=row?; map.insert(id,(p,c)); }
+        map
+    };
     let tx = conn.unchecked_transaction()?;
     tx.execute_batch(
         "DELETE FROM controllers; DELETE FROM generators; DELETE FROM pads;
@@ -301,7 +314,7 @@ pub fn replace_derived(conn: &Connection, dump: &DerivedDump) -> rusqlite::Resul
             "INSERT INTO pad_state_transitions (id, controller_id, pad_display_id, from_state, to_state, at_ms, raw_message_id, parking_brake_release)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
-                opt_string(item, "id"),
+                event_id,
                 opt_i64(item, "controllerId"),
                 opt_i64(item, "padDisplayId"),
                 opt_i64(item, "fromState"),
@@ -313,9 +326,16 @@ pub fn replace_derived(conn: &Connection, dump: &DerivedDump) -> rusqlite::Resul
         )?;
     }
     for item in &dump.events {
+        let event_id=opt_string(item,"id").unwrap_or_default();
+        let controller_id=opt_i64(item,"controllerId");
+        let pad_id=opt_i64(item,"padDisplayId");
+        let (current_pad,current_controller)=assignment_snapshots(&tx,controller_id,pad_id);
+        let (old_pad,old_controller)=existing_snapshots.get(&event_id).cloned().unwrap_or((None,None));
+        let pad_snapshot=old_pad.or(current_pad);
+        let controller_snapshot=old_controller.or(current_controller);
         tx.execute(
-            "INSERT INTO pds_events (id, controller_id, pad_display_id, kind, start_ms, end_ms, duration_ms, journey, parking_brake_release, input1, derived_pds, generator_snapshot, raw_ids, open)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+            "INSERT INTO pds_events (id, controller_id, pad_display_id, kind, start_ms, end_ms, duration_ms, journey, parking_brake_release, input1, derived_pds, generator_snapshot, raw_ids, open, pad_name_snapshot, controller_name_snapshot)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
             params![
                 opt_string(item, "id"),
                 opt_i64(item, "controllerId"),
@@ -331,6 +351,8 @@ pub fn replace_derived(conn: &Connection, dump: &DerivedDump) -> rusqlite::Resul
                 item.get("generatorSnapshot").map(|v| v.to_string()),
                 item.get("rawMessageIds").map(|v| v.to_string()),
                 item.get("open").and_then(|v| v.as_bool()).unwrap_or(false) as i64,
+                pad_snapshot,
+                controller_snapshot,
             ],
         )?;
     }
