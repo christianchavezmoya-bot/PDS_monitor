@@ -10,6 +10,7 @@ export interface DailySummary {
   padsEnteringWarning: number;
   padsEnteringHazard: number;
   proximityHazardEntries: number;
+  silentToHazardEntries: number;
   silentToWarning: number;
   silentToWarningToHazard: number;
   monitorToWarning: number;
@@ -63,6 +64,7 @@ export function summarize(
     padsEnteringWarning: transitions.filter((transition) => transition.toState === 4).length,
     padsEnteringHazard: transitions.filter((transition) => transition.toState === 5).length,
     proximityHazardEntries: transitions.filter((transition) => transition.toState === 5 && transition.fromState !== 2 && transition.fromState !== 4).length,
+    silentToHazardEntries: transitions.filter((transition) => transition.fromState === 2 && transition.toState === 5).length,
     silentToWarning: events.filter((event) => event.sequenceTags.includes("silent-warning")).length,
     silentToWarningToHazard: events.filter((event) => event.sequenceTags.includes("silent-warning-hazard")).length,
     monitorToWarning: events.filter((event) => event.sequenceTags.includes("monitor-warning")).length,
