@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type WheelEvent } from "react";
+import { useMemo, useRef, useState, type PointerEvent, type WheelEvent } from "react";
 import { Eye, EyeOff, Minus, Plus, RotateCcw } from "lucide-react";
 import { formatMachineLabel, formatPadLabel, loadMachineAssignments, loadPadAssignments } from "../core/assignments";
 import { dayBounds, dayKey, formatClock, formatDuration, padStateName } from "../core/padState";
@@ -36,7 +36,7 @@ export function TrendingPage() {
   const [hover, setHover] = useState<{ x: number; at: number } | null>(null);
   const [selected, setSelected] = useState<StateInterval | null>(null);
   const [showLabels, setShowLabels] = useState(true);
-  const drag = useRef<{ x: number; end: number } | null>(null);
+  const drag = useRef<{ x: number; end: number; pointerId: number } | null>(null);
 
   const controllerIds = useMemo(() => [...new Set([
     ...snap.controllers.map(c => c.controllerId),
@@ -81,6 +81,43 @@ export function TrendingPage() {
   const overviewLeft = Math.max(0, Math.min(100, pct(startMs, day.start, day.end-day.start)));
   const overviewRight = Math.max(overviewLeft, Math.min(100, pct(effectiveEnd, day.start, day.end-day.start)));
   const overviewWidth = Math.max(.5, overviewRight-overviewLeft);
+  const historicalEventForInterval = (item: StateInterval) => snap.events
+    .filter(event => event.controllerId===item.controllerId && event.padDisplayId===item.padDisplayId)
+    .find(event => {
+      const intervalEnd=item.endMs??snap.asOfMs;
+      const eventEnd=event.endMs??snap.asOfMs;
+      return event.startMs < intervalEnd && eventEnd > item.startMs;
+    });
+  const intervalPadLabel = (item: StateInterval) => {
+    const historical=historicalEventForInterval(item);
+    return historical?.padNameSnapshot
+      ? `${historical.padNameSnapshot} · PAD ${item.padDisplayId}`
+      : formatPadLabel(item.padDisplayId,pads[item.padDisplayId],"both");
+  };
+  const intervalMachineLabel = (item: StateInterval) => {
+    const historical=historicalEventForInterval(item);
+    return historical?.controllerNameSnapshot
+      ? `${historical.controllerNameSnapshot} · Controller ${item.controllerId}`
+      : formatMachineLabel(item.controllerId,machines[item.controllerId],"both");
+  };
+  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest("button")) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drag.current={x:e.clientX,end:effectiveEnd,pointerId:e.pointerId};
+  };
+  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    const rect=e.currentTarget.getBoundingClientRect();
+    const x=Math.max(0,Math.min(rect.width,e.clientX-rect.left));
+    if(drag.current?.pointerId===e.pointerId){
+      setEndMs(drag.current.end-(e.clientX-drag.current.x)/rect.width*windowMs);
+      setFollowNow(false);
+    }
+    setHover({x,at:startMs+(x/rect.width)*windowMs});
+  };
+  const onPointerEnd = (e: PointerEvent<HTMLDivElement>) => {
+    if(e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    if(drag.current?.pointerId===e.pointerId) drag.current=null;
+  };
   const toggleMachine = (id:number) => {
     const base=selectedMachines.length ? selectedMachines : controllerIds.slice(0,10);
     setSelectedMachines(base.includes(id) ? base.filter(x=>x!==id) : [...base,id].slice(0,10));
@@ -99,9 +136,9 @@ export function TrendingPage() {
 
     <section className="trend-options panel">
       <div><b>Event layers</b>
-        {(["parkingBrake","silent","warning","hazard","generator"] as Layer[]).map(layer=><label key={layer}><input type="checkbox" checked={layers[layer]} onChange={()=>setLayers(v=>({...v,[layer]:!v[layer]}))}/>{layer==="generator"?"Generator events*":layer==="parkingBrake"?"PARKING BRAKE RELEASED":layer.toUpperCase()}</label>)}
-        <label><input type="checkbox" checked={showPeople} onChange={()=>setShowPeople(v=>!v)}/>{showPeople?<Eye/>:<EyeOff/>}PAD / person</label>
-        <label><input type="checkbox" checked={showLabels} onChange={()=>setShowLabels(v=>!v)}/>Event labels</label>
+        {(["parkingBrake","silent","warning","hazard","generator"] as Layer[]).map(layer=><button type="button" key={layer} className={layers[layer]?"trend-toggle active":"trend-toggle"} aria-pressed={layers[layer]} onClick={()=>setLayers(v=>({...v,[layer]:!v[layer]}))}>{layers[layer]?"✓":"○"} {layer==="generator"?"Generator events*":layer==="parkingBrake"?"PARKING BRAKE RELEASED":layer.toUpperCase()}</button>)}
+        <button type="button" className={showPeople?"trend-toggle active":"trend-toggle"} aria-pressed={showPeople} onClick={()=>setShowPeople(v=>!v)}>{showPeople?<Eye/>:<EyeOff/>}PAD / person</button>
+        <button type="button" className={showLabels?"trend-toggle active":"trend-toggle"} aria-pressed={showLabels} onClick={()=>setShowLabels(v=>!v)}>{showLabels?"✓":"○"} Event labels</button>
         <span className="trend-layer-presets"><button onClick={()=>setLayerPreset("all")}>Show All</button><button onClick={()=>setLayerPreset("safety")}>Safety Only</button><button onClick={()=>setLayerPreset("clear")}>Clear</button></span>
         <small>* Generator Low Voltage / Communication Error remain unvalidated and are not synthesized.</small>
       </div>
@@ -113,13 +150,9 @@ export function TrendingPage() {
       <div className="trend-axis">{ticks.map(t=><span key={t} style={{left:`${pct(t,startMs,windowMs)}%`}}>{new Date(t).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit",second:windowMs<=300000?"2-digit":undefined})}</span>)}</div>
       <div className="trend-labels">{activeIds.map(id=><div className="trend-machine-label" key={id}><b>{machines[id]?.machineName || machines[id]?.machineId || `Controller ${id}`}</b><small>Controller {id}</small></div>)}</div>
       <div className="trend-viewport" onWheel={onWheel}
-        onMouseDown={e=>{drag.current={x:e.clientX,end:effectiveEnd};}}
-        onMouseMove={e=>{
-          const rect=e.currentTarget.getBoundingClientRect();
-          if(drag.current){setEndMs(drag.current.end-(e.clientX-drag.current.x)/rect.width*windowMs);setFollowNow(false);}
-          setHover({x:Math.max(0,Math.min(rect.width,e.clientX-rect.left)),at:startMs+Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width))*windowMs});
-        }}
-        onMouseUp={endDrag} onMouseLeave={()=>{endDrag();setHover(null);}}>
+        onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+        onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd}
+        onPointerLeave={e=>{if(!drag.current){setHover(null);} else if(!e.currentTarget.hasPointerCapture(e.pointerId)){endDrag();}}}>
         {ticks.map(t=><i className="trend-gridline" key={t} style={{left:`${pct(t,startMs,windowMs)}%`}} />)}
         {activeIds.map(id=><div className="trend-lane" key={id}>
           {layers.parkingBrake && snap.parkingBrakeIntervals.filter(v=>v.controllerId===id && v.released && v.startMs < effectiveEnd && (v.endMs??snap.asOfMs)>startMs).map((item,index)=>{
@@ -134,7 +167,7 @@ export function TrendingPage() {
             const width=Math.max(.25,right-left);
             const label=padStateName(item.stateCode);
             return <button key={`${id}-${item.padDisplayId}-${item.startMs}-${index}`} className={`trend-event trend-${layer}`} style={{left:`${left}%`,width:`${width}%`}} onClick={e=>{e.stopPropagation();setSelected(item);}} onDoubleClick={e=>{e.stopPropagation();setEndMs((item.endMs??snap.asOfMs)+15000);setWindowMs(clampWindow(Math.max(60000,(item.endMs??snap.asOfMs)-item.startMs+30000)));setFollowNow(false);}} title={`${label} · ${formatDuration((item.endMs??snap.asOfMs)-item.startMs)}`}>
-              {showLabels && <span>{label}</span>}{showPeople && width>7 && <small>{formatPadLabel(item.padDisplayId,pads[item.padDisplayId],"both")}</small>}
+              {showLabels && <span>{label}</span>}{showPeople && width>7 && <small>{intervalPadLabel(item)}</small>}
             </button>;
           })}
         </div>)}
@@ -153,6 +186,6 @@ export function TrendingPage() {
       <button onClick={()=>pan(windowMs*.8)}>Later ▶</button>
     </div>
 
-    {selected && <section className="panel trend-detail"><button className="trend-close" onClick={()=>setSelected(null)}>×</button><h3>{padStateName(selected.stateCode)} event</h3><p>Machine <b>{formatMachineLabel(selected.controllerId,machines[selected.controllerId],"both")}</b></p><p>PAD / person <b>{formatPadLabel(selected.padDisplayId,pads[selected.padDisplayId],"both")}</b></p><p>Start <b>{formatClock(selected.startMs)}</b></p><p>End <b>{selected.endMs?formatClock(selected.endMs):"Open / current"}</b></p><p>Duration <b>{formatDuration((selected.endMs??snap.asOfMs)-selected.startMs)}</b></p><p>Tip <b>Double-click a bar to zoom to that event</b></p></section>}
+    {selected && <section className="panel trend-detail"><button className="trend-close" onClick={()=>setSelected(null)}>×</button><h3>{padStateName(selected.stateCode)} event</h3><p>Machine <b>{intervalMachineLabel(selected)}</b></p><p>PAD / person <b>{intervalPadLabel(selected)}</b></p><p>Start <b>{formatClock(selected.startMs)}</b></p><p>End <b>{selected.endMs?formatClock(selected.endMs):"Open / current"}</b></p><p>Duration <b>{formatDuration((selected.endMs??snap.asOfMs)-selected.startMs)}</b></p><p>Tip <b>Double-click a bar to zoom to that event</b></p></section>}
   </main>;
 }
