@@ -59,6 +59,7 @@ export function TrendingPage() {
   };
   const pan = (delta: number) => { setEndMs(effectiveEnd + delta); setFollowNow(false); };
   const goNow = () => { setEndMs(snap.asOfMs); setFollowNow(mode === "live"); };
+  const endDrag = () => { drag.current=null; };
   const onWheel = (e: WheelEvent<HTMLDivElement>) => {
     e.preventDefault();
     const rect=e.currentTarget.getBoundingClientRect();
@@ -118,7 +119,7 @@ export function TrendingPage() {
           if(drag.current){setEndMs(drag.current.end-(e.clientX-drag.current.x)/rect.width*windowMs);setFollowNow(false);}
           setHover({x:Math.max(0,Math.min(rect.width,e.clientX-rect.left)),at:startMs+Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width))*windowMs});
         }}
-        onMouseUp={()=>{drag.current=null;}} onMouseLeave={()=>{drag.current=null;setHover(null);}}>
+        onMouseUp={endDrag} onMouseLeave={()=>{endDrag();setHover(null);}}>
         {ticks.map(t=><i className="trend-gridline" key={t} style={{left:`${pct(t,startMs,windowMs)}%`}} />)}
         {activeIds.map(id=><div className="trend-lane" key={id}>
           {layers.parkingBrake && snap.parkingBrakeIntervals.filter(v=>v.controllerId===id && v.released && v.startMs < effectiveEnd && (v.endMs??snap.asOfMs)>startMs).map((item,index)=>{
@@ -143,8 +144,8 @@ export function TrendingPage() {
       </div>
     </section>
 
-    <div className="trend-overview" title="24-hour navigator" onClick={e=>{const rect=e.currentTarget.getBoundingClientRect();const at=day.start+((e.clientX-rect.left)/rect.width)*(day.end-day.start);setEndMs(at+windowMs/2);setFollowNow(false);}}>
-      <span>00:00</span><div className="trend-overview-track"><i style={{left:`${overviewLeft}%`,width:`${overviewWidth}%`}} /></div><span>24:00</span>
+    <div className="trend-overview" title="24-hour navigator">
+      <span>00:00</span><button type="button" className="trend-overview-track" aria-label="24-hour time navigator" onClick={e=>{e.stopPropagation();const rect=e.currentTarget.getBoundingClientRect();const at=day.start+((e.clientX-rect.left)/rect.width)*(day.end-day.start);setEndMs(at+windowMs/2);setFollowNow(false);}}><i style={{left:`${overviewLeft}%`,width:`${overviewWidth}%`}} /></button><span>24:00</span>
     </div>
     <div className="trend-footer">
       <button onClick={()=>pan(-windowMs*.8)}>◀ Earlier</button>

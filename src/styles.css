@@ -257,7 +257,7 @@ td small { display: block; color: #8eabba; }
 
 
 /* PDS Trending */
-.trending-page { display:flex; flex-direction:column; gap:10px; }
+.trending-page { display:flex; flex-direction:column; gap:10px; position:relative; isolation:isolate; }
 .trending-toolbar { display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap; }
 .trending-toolbar > div:first-child { margin-right:auto; }
 .trending-toolbar h1 { margin:0; font-size:24px; }
@@ -266,13 +266,13 @@ td small { display: block; color: #8eabba; }
 .trend-presets button { padding:7px 8px; }
 .trend-follow { padding:7px 9px; border:1px solid #607887; border-radius:6px; color:#9db6c5; font-size:11px; font-weight:800; letter-spacing:.6px; }
 .trend-follow.active { border-color:#43df6c; color:#43df6c; background:#0e2414; }
-.trend-options { display:grid; grid-template-columns:1fr minmax(280px,420px); gap:18px; padding:9px 12px; }
+.trend-options { position:relative; z-index:5; pointer-events:auto; display:grid; grid-template-columns:1fr minmax(280px,420px); gap:18px; padding:9px 12px; }
 .trend-options > div { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
 .trend-options label { display:flex; align-items:center; gap:5px; color:#c3d4de; white-space:nowrap; }
 .trend-options label svg { width:14px; height:14px; }
 .trend-options small { flex-basis:100%; }
 .trend-machines { justify-content:flex-end; }
-.trend-shell { display:grid; grid-template-columns:190px minmax(700px,1fr); grid-template-rows:42px auto; border:1px solid #315164; border-radius:8px; overflow:hidden; background:#07141c; min-height:300px; flex:1; }
+.trend-shell { position:relative; z-index:1; display:grid; grid-template-columns:190px minmax(700px,1fr); grid-template-rows:42px auto; border:1px solid #315164; border-radius:8px; overflow:hidden; background:#07141c; min-height:300px; flex:1; }
 .trend-axis-corner { display:flex; align-items:center; padding:0 12px; background:#102937; border-right:1px solid #315164; color:#9db6c5; font-size:11px; font-weight:800; letter-spacing:.5px; }
 .trend-axis { position:relative; background:#102937; overflow:hidden; }
 .trend-axis span { position:absolute; top:12px; transform:translateX(-50%); font:11px Consolas,monospace; color:#bcd0dc; white-space:nowrap; }
@@ -293,7 +293,7 @@ td small { display: block; color: #8eabba; }
 .trend-hazard { background:#e12626; }
 .trend-crosshair { position:absolute; top:0; bottom:0; width:1px; background:#e7f3f8; z-index:4; pointer-events:none; }
 .trend-crosshair span { position:absolute; top:4px; left:5px; background:#06131ce8; border:1px solid #607887; border-radius:4px; padding:3px 5px; color:#fff; font:10px Consolas,monospace; white-space:nowrap; }
-.trend-footer { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px; }
+.trend-footer { position:relative; z-index:6; pointer-events:auto; display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px; }
 .trend-range { text-align:center; color:#9db6c5; font-size:12px; }
 .trend-range b { color:#e7f3f8; }
 .trend-detail { position:fixed; right:18px; bottom:18px; width:min(420px,calc(100vw - 36px)); z-index:20; box-shadow:0 18px 50px #000a; }
@@ -319,7 +319,10 @@ td small { display: block; color: #8eabba; }
 
 .trend-layer-presets { display:inline-flex; gap:4px; }
 .trend-layer-presets button { padding:4px 7px; font-size:10px; }
-.trend-overview { display:grid; grid-template-columns:42px 1fr 42px; align-items:center; gap:7px; color:#8eabba; font:10px Consolas,monospace; cursor:pointer; }
-.trend-overview-track { position:relative; height:18px; border:1px solid #315164; border-radius:4px; background:#07141c; overflow:hidden; }
+.trend-overview { position:relative; z-index:6; pointer-events:auto; display:grid; grid-template-columns:42px 1fr 42px; align-items:center; gap:7px; color:#8eabba; font:10px Consolas,monospace; cursor:pointer; }
+.trend-overview-track { position:relative; display:block; width:100%; height:24px; padding:0; border:1px solid #315164; border-radius:4px; background:#07141c; overflow:hidden; }
 .trend-overview-track::before { content:""; position:absolute; inset:0; background:repeating-linear-gradient(90deg,transparent 0,transparent calc(25% - 1px),#274657 calc(25% - 1px),#274657 25%); }
-.trend-overview-track i { position:absolute; top:2px; bottom:2px; min-width:4px; border:1px solid #7ed6ff; border-radius:3px; background:#087dcc55; z-index:1; }
+.trend-overview-track i { position:absolute; pointer-events:none; top:2px; bottom:2px; min-width:4px; border:1px solid #7ed6ff; border-radius:3px; background:#087dcc55; z-index:1; }
+
+.trending-toolbar { position:relative; z-index:6; pointer-events:auto; }
+.trend-options button,.trend-options label,.trending-toolbar button,.trending-toolbar input,.trend-footer button,.trend-overview-track { pointer-events:auto; }
