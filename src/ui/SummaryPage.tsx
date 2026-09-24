@@ -19,6 +19,8 @@ export function SummaryPage() {
   const silentHazardLags = silentHazards.map(event => event.silentHazardReactionLagMs).filter((ms): ms is number => ms != null);
   const avgSilentHazardLag = silentHazardLags.length ? silentHazardLags.reduce((a,b)=>a+b,0)/silentHazardLags.length : null;
   const avgReactionLag = reactionLags.length ? reactionLags.reduce((a,b)=>a+b,0)/reactionLags.length : null;
+  const eventPadLabel=(event:typeof events[number])=>event.padNameSnapshot ? `${event.padNameSnapshot} · PAD ${event.padDisplayId}` : formatPadLabel(event.padDisplayId,padAssignments[event.padDisplayId],"both");
+  const eventMachineLabel=(event:typeof events[number])=>event.controllerNameSnapshot ? `${event.controllerNameSnapshot} · Controller ${event.controllerId}` : formatMachineLabel(event.controllerId,machineAssignments[event.controllerId],"both");
   const rank = (kind: "warning" | "hazard") => {
     const counts = new Map<number, number>();
     events.filter((event) => event.kind === kind).forEach((event) => counts.set(event.padDisplayId, (counts.get(event.padDisplayId) ?? 0) + 1));
@@ -52,8 +54,8 @@ export function SummaryPage() {
         <Stat label="Longest Hazard" value={summary.longestHazardLabel} tone="hazard" />
       </section>
       <section className="event-panels">
-        <article className="panel"><h3>Warning events</h3>{events.filter(e => e.kind === "warning").map(e => <div className="summary-event warning-event" key={e.id}><b>{formatPadLabel(e.padDisplayId, padAssignments[e.padDisplayId], "both")}</b><span>{formatMachineLabel(e.controllerId, machineAssignments[e.controllerId], "both")}</span><time>{formatClock(e.startMs)}</time></div>)}{!events.some(e => e.kind === "warning") && <p>No Warning events.</p>}</article>
-        <article className="panel"><h3>Hazard events</h3>{events.filter(e => e.kind === "hazard").map(e => <div className="summary-event hazard-event" key={e.id}><b>{formatPadLabel(e.padDisplayId, padAssignments[e.padDisplayId], "both")}</b><span>{formatMachineLabel(e.controllerId, machineAssignments[e.controllerId], "both")}</span><time>{formatClock(e.startMs)}{e.hazardReactionLagMs != null && <small> · proximity reaction {(e.hazardReactionLagMs/1000).toFixed(2)} s</small>}{e.silentHazardReactionLagMs != null && <small> · Silent → Hazard reaction {(e.silentHazardReactionLagMs/1000).toFixed(2)} s</small>}</time></div>)}{!events.some(e => e.kind === "hazard") && <p>No Hazard events.</p>}</article>
+        <article className="panel"><h3>Warning events</h3>{events.filter(e => e.kind === "warning").map(e => <div className="summary-event warning-event" key={e.id}><b>{eventPadLabel(e)}</b><span>{eventMachineLabel(e)}</span><time>{formatClock(e.startMs)}</time></div>)}{!events.some(e => e.kind === "warning") && <p>No Warning events.</p>}</article>
+        <article className="panel"><h3>Hazard events</h3>{events.filter(e => e.kind === "hazard").map(e => <div className="summary-event hazard-event" key={e.id}><b>{eventPadLabel(e)}</b><span>{eventMachineLabel(e)}</span><time>{formatClock(e.startMs)}{e.hazardReactionLagMs != null && <small> · proximity reaction {(e.hazardReactionLagMs/1000).toFixed(2)} s</small>}{e.silentHazardReactionLagMs != null && <small> · Silent → Hazard reaction {(e.silentHazardReactionLagMs/1000).toFixed(2)} s</small>}</time></div>)}{!events.some(e => e.kind === "hazard") && <p>No Hazard events.</p>}</article>
       </section>
       <section className="leaderboards">
         {(["warning", "hazard"] as const).map(kind => <article className={`panel leaderboard ${kind}`} key={kind}><h3>Top 10 PADs — {kind === "warning" ? "Warning" : "Hazard"} events</h3>{rank(kind).map(([id,count],i) => <div className="rank-row" key={id}><strong>{i+1}</strong><span>{formatPadLabel(id,padAssignments[id],"both")}</span><b>{count} {count === 1 ? "event" : "events"}</b></div>)}{rank(kind).length === 0 && <p>No events for this day/filter.</p>}</article>)}
