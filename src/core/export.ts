@@ -1,5 +1,6 @@
 import { formatClock, formatDuration, parkingBrakeLabel } from "./padState";
 import type { InteractionEvent, RawMqttMessage } from "./types";
+import type { MachineAssignment, PadAssignment } from "./assignments";
 
 function csvCell(value: unknown): string {
   const text = value === null || value === undefined ? "" : String(value);
@@ -39,11 +40,13 @@ export function rawToCsv(messages: RawMqttMessage[]): string {
   return [header.join(","), ...rows].join("\n");
 }
 
-export function eventsToCsv(events: InteractionEvent[]): string {
+export function eventsToCsv(events: InteractionEvent[], padAssignments: Record<number, PadAssignment> = {}, machineAssignments: Record<number, MachineAssignment> = {}): string {
   const header = [
     "id",
     "controllerId",
+    "controllerName",
     "padId",
+    "padName",
     "kind",
     "start",
     "end",
@@ -61,7 +64,9 @@ export function eventsToCsv(events: InteractionEvent[]): string {
     [
       event.id,
       event.controllerId,
+      machineAssignments[event.controllerId]?.machineName ?? machineAssignments[event.controllerId]?.machineId ?? "",
       event.padDisplayId,
+      padAssignments[event.padDisplayId]?.name ?? "",
       event.kind,
       formatClock(event.startMs),
       event.endMs === null ? "" : formatClock(event.endMs),
