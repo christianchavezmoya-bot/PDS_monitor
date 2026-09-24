@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS raw_mqtt_messages (
 );
 CREATE INDEX IF NOT EXISTS idx_raw_time ON raw_mqtt_messages(received_at_ms);
 CREATE INDEX IF NOT EXISTS idx_raw_topic ON raw_mqtt_messages(topic);
+CREATE TABLE IF NOT EXISTS pad_assignments (pad_id INTEGER PRIMARY KEY, name TEXT NOT NULL, employee_id TEXT, notes TEXT, updated_at_ms INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS machine_assignments (controller_id INTEGER PRIMARY KEY, machine_id TEXT NOT NULL, machine_name TEXT, notes TEXT, updated_at_ms INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -74,7 +76,9 @@ CREATE TABLE IF NOT EXISTS pds_events (
   derived_pds TEXT,
   generator_snapshot TEXT,
   raw_ids TEXT,
-  open INTEGER
+  open INTEGER,
+  pad_name_snapshot TEXT,
+  controller_name_snapshot TEXT
 );
 CREATE TABLE IF NOT EXISTS generator_events (
   id INTEGER PRIMARY KEY,
@@ -152,6 +156,8 @@ pub fn open(path: &Path) -> rusqlite::Result<Connection> {
     }
     let conn = Connection::open(path)?;
     conn.execute_batch(SCHEMA)?;
+    let _ = conn.execute("ALTER TABLE pds_events ADD COLUMN pad_name_snapshot TEXT", []);
+    let _ = conn.execute("ALTER TABLE pds_events ADD COLUMN controller_name_snapshot TEXT", []);
     Ok(conn)
 }
 
@@ -349,4 +355,26 @@ pub fn save_settings(conn: &Connection, settings: &MqttSettings) -> rusqlite::Re
         params![value],
     )?;
     Ok(())
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PadAssignment { pub pad_id: i64, pub name: String, pub employee_id: Option<String>, pub notes: Option<String> }
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MachineAssignment { pub controller_id: i64, pub machine_id: String, pub machine_name: Option<String>, pub notes: Option<String> }
+
+pub fn list_pad_assignments(conn: &Connection) -> rusqlite::Result<Vec<PadAssignment>> {
+    let mut stmt=conn.prepare("SELECT pad_id,name,employee_id,notes FROM pad_assignments ORDER BY pad_id")?;
+    stmt.query_map([], |r| Ok(PadAssignment{pad_id:r.get(0)?,name:r.get(1)?,employee_id:r.get(2)?,notes:r.get(3)?}))?.collect()
+}
+pub fn upsert_pad_assignment(conn:&Connection,item:&PadAssignment)->rusqlite::Result<()> {
+    conn.execute("INSERT INTO pad_assignments(pad_id,name,employee_id,notes,updated_at_ms) VALUES(?1,?2,?3,?4,?5) ON CONFLICT(pad_id) DO UPDATE SET name=excluded.name,employee_id=excluded.employee_id,notes=excluded.notes,updated_at_ms=excluded.updated_at_ms",params![item.pad_id,item.name,item.employee_id,item.notes,chrono::Utc::now().timestamp_millis()])?; Ok(())
+}
+pub fn list_machine_assignments(conn: &Connection) -> rusqlite::Result<Vec<MachineAssignment>> {
+    let mut stmt=conn.prepare("SELECT controller_id,machine_id,machine_name,notes FROM machine_assignments ORDER BY controller_id")?;
+    stmt.query_map([], |r| Ok(MachineAssignment{controller_id:r.get(0)?,machine_id:r.get(1)?,machine_name:r.get(2)?,notes:r.get(3)?}))?.collect()
+}
+pub fn upsert_machine_assignment(conn:&Connection,item:&MachineAssignment)->rusqlite::Result<()> {
+    conn.execute("INSERT INTO machine_assignments(controller_id,machine_id,machine_name,notes,updated_at_ms) VALUES(?1,?2,?3,?4,?5) ON CONFLICT(controller_id) DO UPDATE SET machine_id=excluded.machine_id,machine_name=excluded.machine_name,notes=excluded.notes,updated_at_ms=excluded.updated_at_ms",params![item.controller_id,item.machine_id,item.machine_name,item.notes,chrono::Utc::now().timestamp_millis()])?; Ok(())
 }
