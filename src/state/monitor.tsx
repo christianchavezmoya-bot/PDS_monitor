@@ -87,19 +87,24 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
   const telemetryAgeMs = latestTelemetryMs === null ? null : Math.max(0, snap.asOfMs - latestTelemetryMs);
   const telemetry = { state: (latestTelemetryMs === null ? "waiting" : telemetryAgeMs! > 30_000 ? "stale" : "live") as "live" | "stale" | "waiting", lastMessageMs: latestTelemetryMs, ageMs: telemetryAgeMs };
 
-  const publish = useCallback(() => {
-    const asOf = modeRef.current === "live" ? Date.now() : undefined;
+  const snapshotWithHistoricalIdentities = useCallback((asOf?: number) => {
     const next = engineRef.current.snapshot(asOf);
     next.events = next.events.map(event => {
       const stored=identitySnapshots.current.get(event.id);
       return stored ? {...event,padNameSnapshot:stored.padNameSnapshot??event.padNameSnapshot,controllerNameSnapshot:stored.controllerNameSnapshot??event.controllerNameSnapshot} : event;
     });
+    return next;
+  }, []);
+
+  const publish = useCallback(() => {
+    const asOf = modeRef.current === "live" ? Date.now() : undefined;
+    const next = snapshotWithHistoricalIdentities(asOf);
     setSnap(next);
     if (next.events.length) setSelectedDay((current) => current || dayKey(next.events[next.events.length - 1].startMs));
     const latest = [...next.controllers].sort((a, b) => b.lastSeenMs - a.lastSeenMs)[0];
     if (!controllerPinned.current && latest) setSelectedController(latest.controllerId);
     if (tauri && modeRef.current === "live") void saveDerived(next);
-  }, [tauri]);
+  }, [tauri, snapshotWithHistoricalIdentities]);
 
   const clearTimer = () => {
     if (timer.current !== null) window.clearTimeout(timer.current);
@@ -207,10 +212,10 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const clock = window.setInterval(() => {
-      if (modeRef.current === "live") setSnap(engineRef.current.snapshot(Date.now()));
+      if (modeRef.current === "live") setSnap(snapshotWithHistoricalIdentities(Date.now()));
     }, 1000);
     return () => window.clearInterval(clock);
-  }, []);
+  }, [snapshotWithHistoricalIdentities]);
 
   useEffect(() => {
     let unlisten: (() => void) | undefined;
