@@ -7,7 +7,7 @@ import { dayKey } from "../core/padState";
 import { openBundledVisit, replayDelayMs, type ReplaySpeed } from "../core/replay";
 import type { EngineSnapshot, RawMqttMessage } from "../core/types";
 import { hydrateAssignmentsFromSqlite } from "../core/assignments";
-import { isTauri, loadRecordedMessages, persistRaw, saveDerived, startMqtt, type MqttSettings, type MqttStatus } from "../data/tauriBridge";
+import { isTauri, loadEventIdentitySnapshots, loadRecordedMessages, persistRaw, saveDerived, startMqtt, type MqttSettings, type MqttStatus } from "../data/tauriBridge";
 
 export type PageId = "raw" | "live" | "trending" | "summary" | "report";
 
@@ -71,6 +71,7 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
   const speedRef = useRef<ReplaySpeed>(10);
   const [page, setPage] = useState<PageId>(initialPage);
   const [snap, setSnap] = useState<EngineSnapshot>(() => engineRef.current.snapshot());
+  const identitySnapshots = useRef(new Map<string,{padNameSnapshot?:string|null;controllerNameSnapshot?:string|null}>());
   const [mode, setMode] = useState<"live" | "replay">("live");
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeedState] = useState<ReplaySpeed>(10);
@@ -89,6 +90,10 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
   const publish = useCallback(() => {
     const asOf = modeRef.current === "live" ? Date.now() : undefined;
     const next = engineRef.current.snapshot(asOf);
+    next.events = next.events.map(event => {
+      const stored=identitySnapshots.current.get(event.id);
+      return stored ? {...event,padNameSnapshot:stored.padNameSnapshot??event.padNameSnapshot,controllerNameSnapshot:stored.controllerNameSnapshot??event.controllerNameSnapshot} : event;
+    });
     setSnap(next);
     if (next.events.length) setSelectedDay((current) => current || dayKey(next.events[next.events.length - 1].startMs));
     const latest = [...next.controllers].sort((a, b) => b.lastSeenMs - a.lastSeenMs)[0];
@@ -213,6 +218,8 @@ export function MonitorProvider({ children }: { children: ReactNode }) {
     (async () => {
       if (!isTauri()) return;
       await hydrateAssignmentsFromSqlite();
+      const storedIdentities=await loadEventIdentitySnapshots();
+      identitySnapshots.current=new Map(storedIdentities.map(item=>[item.id,item]));
       const recorded = await loadRecordedMessages();
       if (cancelled) return;
       liveLog.current = recorded;
