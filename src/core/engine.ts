@@ -6,6 +6,7 @@ import type {
   GeneratorLive,
   InteractionEvent,
   PadLive,
+  ParkingBrakeInterval,
   RawMqttMessage,
   StateInterval,
   StateTransition,
@@ -52,6 +53,7 @@ export class SessionEngine {
   private generators = new Map<string, GeneratorLive>();
   private transitions: StateTransition[] = [];
   private intervals: StateInterval[] = [];
+  private parkingBrakeIntervals: ParkingBrakeInterval[] = [];
   private events: InteractionEvent[] = [];
   private openEvents = new Map<string, InteractionEvent>();
 
@@ -67,6 +69,7 @@ export class SessionEngine {
     this.generators.clear();
     this.transitions = [];
     this.intervals = [];
+    this.parkingBrakeIntervals = [];
     this.events = [];
     this.openEvents.clear();
   }
@@ -95,6 +98,7 @@ export class SessionEngine {
     if (decoded.controllerStatus) {
       const c = this.controllers.get(decoded.controllerStatus.controllerId)!;
       c.input1 = decoded.controllerStatus.input1;
+      this.applyParkingBrake(decoded.controllerStatus.controllerId, decoded.controllerStatus.parkingBrakeRelease, raw);
       c.parkingBrakeRelease = decoded.controllerStatus.parkingBrakeRelease;
       c.unmappedByTopic["proximity/1"] = decoded.unmapped;
       c.rawMessageId = raw.id;
@@ -152,6 +156,7 @@ export class SessionEngine {
       generators: [...this.generators.values()].sort((a, b) => a.generatorId - b.generatorId),
       transitions: this.transitions,
       intervals: this.intervals,
+      parkingBrakeIntervals: this.parkingBrakeIntervals,
       events,
     };
   }
@@ -179,6 +184,23 @@ export class SessionEngine {
     c.lastSeenMs = seenMs;
     if (deviceTimestamp !== null) c.lastDeviceTimestamp = deviceTimestamp;
     return c;
+  }
+
+  private applyParkingBrake(controllerId: number, value: number | null, raw: RawMqttMessage): void {
+    if (value !== 0 && value !== 1) return;
+    const released = value === 1;
+    const current = [...this.parkingBrakeIntervals].reverse().find(
+      (item) => item.controllerId === controllerId && item.endMs === null,
+    );
+    if (current?.released === released) return;
+    if (current) current.endMs = raw.receivedAtMs;
+    this.parkingBrakeIntervals.push({
+      controllerId,
+      released,
+      startMs: raw.receivedAtMs,
+      endMs: null,
+      rawMessageId: raw.id,
+    });
   }
 
   private touchGenerator(controllerId: number, generatorId: number, seenMs: number): GeneratorLive {

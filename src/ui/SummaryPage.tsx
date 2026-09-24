@@ -34,6 +34,7 @@ export function SummaryPage() {
         <Stat label="Unique PADs" value={summary.uniquePads.length} note={summary.uniquePads.map((id) => formatPadLabel(id, padAssignments[id], "both")).join(", ") || "none"} />
         <Stat label="Entries to Warning" value={summary.padsEnteringWarning} tone="warning" />
         <Stat label="Entries to Hazard" value={summary.padsEnteringHazard} tone="hazard" />
+        <Stat label="Entries to Proximity Hazard" value={summary.proximityHazardEntries} note="Direct Hazard entry from ID, Monitor, Unknown, or another non-Silent/non-Warning state" tone="hazard" />
         <Stat label="Silent → Warning" value={summary.silentToWarning} tone="silent" />
         <Stat label="Silent → Warning → Hazard" value={summary.silentToWarningToHazard} tone="hazard" />
         <Stat label="Time in Warning" value={summary.totalWarningLabel} tone="warning" />

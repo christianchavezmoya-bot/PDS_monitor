@@ -12,8 +12,8 @@ const PRESETS = [
   ["1m", 60_000], ["5m", 300_000], ["15m", 900_000], ["30m", DEFAULT_WINDOW],
   ["1h", 3_600_000], ["4h", 14_400_000], ["12h", 43_200_000], ["24h", MAX_WINDOW],
 ] as const;
-type Layer = "silent" | "warning" | "hazard" | "generator";
-const STATE_LAYER: Record<number, Exclude<Layer, "generator"> | undefined> = { 2: "silent", 4: "warning", 5: "hazard" };
+type Layer = "parkingBrake" | "silent" | "warning" | "hazard" | "generator";
+const STATE_LAYER: Record<number, Exclude<Layer, "generator" | "parkingBrake"> | undefined> = { 2: "silent", 4: "warning", 5: "hazard" };
 
 function clampWindow(ms: number) { return Math.min(MAX_WINDOW, Math.max(MIN_WINDOW, ms)); }
 function overlaps(item: StateInterval, start: number, end: number, now: number) {
@@ -30,7 +30,7 @@ export function TrendingPage() {
   const initialEnd = mode === "live" ? snap.asOfMs : dayBounds(selectedDay).end;
   const [endMs, setEndMs] = useState(initialEnd);
   const [followNow, setFollowNow] = useState(mode === "live");
-  const [layers, setLayers] = useState<Record<Layer, boolean>>({ silent: true, warning: true, hazard: true, generator: true });
+  const [layers, setLayers] = useState<Record<Layer, boolean>>({ parkingBrake: true, silent: true, warning: true, hazard: true, generator: true });
   const [showPeople, setShowPeople] = useState(true);
   const [selectedMachines, setSelectedMachines] = useState<number[]>([]);
   const [hover, setHover] = useState<{ x: number; at: number } | null>(null);
@@ -86,7 +86,7 @@ export function TrendingPage() {
 
     <section className="trend-options panel">
       <div><b>Event layers</b>
-        {(["silent","warning","hazard","generator"] as Layer[]).map(layer=><label key={layer}><input type="checkbox" checked={layers[layer]} onChange={()=>setLayers(v=>({...v,[layer]:!v[layer]}))}/>{layer==="generator"?"Generator events*":layer.toUpperCase()}</label>)}
+        {(["parkingBrake","silent","warning","hazard","generator"] as Layer[]).map(layer=><label key={layer}><input type="checkbox" checked={layers[layer]} onChange={()=>setLayers(v=>({...v,[layer]:!v[layer]}))}/>{layer==="generator"?"Generator events*":layer==="parkingBrake"?"PARKING BRAKE RELEASED":layer.toUpperCase()}</label>)}
         <label><input type="checkbox" checked={showPeople} onChange={()=>setShowPeople(v=>!v)}/>{showPeople?<Eye/>:<EyeOff/>}PAD / person</label>
         <small>* Generator Low Voltage / Communication Error remain unvalidated and are not synthesized.</small>
       </div>
@@ -107,6 +107,11 @@ export function TrendingPage() {
         onMouseUp={()=>{drag.current=null;}} onMouseLeave={()=>{drag.current=null;setHover(null);}}>
         {ticks.map(t=><i className="trend-gridline" key={t} style={{left:`${pct(t,startMs,windowMs)}%`}} />)}
         {activeIds.map(id=><div className="trend-lane" key={id}>
+          {layers.parkingBrake && snap.parkingBrakeIntervals.filter(v=>v.controllerId===id && v.released && v.startMs < effectiveEnd && (v.endMs??snap.asOfMs)>startMs).map((item,index)=>{
+            const left=Math.max(0,pct(item.startMs,startMs,windowMs));
+            const right=Math.min(100,pct(item.endMs??snap.asOfMs,startMs,windowMs));
+            return <div key={`brake-${id}-${item.startMs}-${index}`} className="trend-brake-release" style={{left:`${left}%`,width:`${Math.max(.25,right-left)}%`}} title={`Parking Brake Released · ${formatDuration((item.endMs??snap.asOfMs)-item.startMs)}`}><span>PARKING BRAKE RELEASED</span></div>;
+          })}
           {visible.filter(v=>v.controllerId===id).map((item,index)=>{
             const layer=STATE_LAYER[item.stateCode]; if(!layer || !layers[layer]) return null;
             const left=Math.max(0,pct(item.startMs,startMs,windowMs));
