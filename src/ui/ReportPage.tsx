@@ -3,12 +3,15 @@ import { downloadText, eventsToCsv } from "../core/export";
 import { formatClock, formatDuration, parkingBrakeLabel } from "../core/padState";
 import { filterEvents } from "../core/summary";
 import { useMonitor } from "../state/monitor";
+import { formatMachineLabel, formatPadLabel, loadMachineAssignments, loadPadAssignments } from "../core/assignments";
 
 export function ReportPage() {
   const { snap, engine, selectedDay, setSelectedDay, selectedController, setSelectedController } = useMonitor();
   const [padId, setPadId] = useState("");
   const [kind, setKind] = useState<"all" | "warning" | "hazard">("all");
   const [openId, setOpenId] = useState<string | null>(null);
+  const padAssignments = loadPadAssignments();
+  const machineAssignments = loadMachineAssignments();
   const pads = [...new Set(snap.events.map((event) => event.padDisplayId))].sort((a, b) => a - b);
   const events = useMemo(
     () =>
@@ -37,7 +40,7 @@ export function ReportPage() {
           >
             <option value="">All</option>
             {snap.controllers.map((controller) => (
-              <option key={controller.controllerId} value={controller.controllerId}>
+              <option key={formatMachineLabel(controller.controllerId, machineAssignments[controller.controllerId], "both")} value={controller.controllerId}>
                 {controller.controllerId}
               </option>
             ))}
@@ -49,7 +52,7 @@ export function ReportPage() {
             <option value="">All</option>
             {pads.map((id) => (
               <option key={id} value={id}>
-                {id}
+                {formatPadLabel(id, padAssignments[id], "both")}
               </option>
             ))}
           </select>
@@ -62,7 +65,7 @@ export function ReportPage() {
             <option value="hazard">Hazard</option>
           </select>
         </label>
-        <button type="button" onClick={() => downloadText(`pds-events-${selectedDay}.csv`, eventsToCsv(events), "text/csv")}>
+        <button type="button" onClick={() => downloadText(`pds-events-${selectedDay}.csv`, eventsToCsv(events, padAssignments, machineAssignments), "text/csv")}>
           Export CSV
         </button>
       </section>
@@ -85,8 +88,8 @@ export function ReportPage() {
           <tbody>
             {events.map((event) => (
               <tr key={event.id} onClick={() => setOpenId(event.id)} className={openId === event.id ? "selected" : ""}>
-                <td>{event.padDisplayId}</td>
-                <td>{event.controllerId}</td>
+                <td>{formatPadLabel(event.padDisplayId, padAssignments[event.padDisplayId], "both")}</td>
+                <td>{formatMachineLabel(event.controllerId, machineAssignments[event.controllerId], "both")}</td>
                 <td className={event.kind}>{event.kind}{event.open ? " (open)" : ""}</td>
                 <td>{formatClock(event.startMs)}</td>
                 <td>{event.endMs === null ? "open" : formatClock(event.endMs)}</td>
