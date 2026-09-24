@@ -1,14 +1,16 @@
-import { Activity, AlertTriangle, BarChart3, Database, Map, Pause, Play, Square } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, Database, Map, Pause, Play, Square, TrendingUp } from "lucide-react";
 import { MapPage } from "./ui/MapPage";
 import { RawPage } from "./ui/RawPage";
 import { ReportPage } from "./ui/ReportPage";
 import { SummaryPage } from "./ui/SummaryPage";
+import { TrendingPage } from "./ui/TrendingPage";
 import { MonitorProvider, useMonitor, type PageId } from "./state/monitor";
 import type { ReplaySpeed } from "./core/replay";
 
 const NAV: { id: PageId; label: string; icon: typeof Database }[] = [
   { id: "raw", label: "Raw Data", icon: Database },
   { id: "live", label: "Live Map", icon: Map },
+  { id: "trending", label: "PDS Trending", icon: TrendingUp },
   { id: "summary", label: "Daily Summary", icon: BarChart3 },
   { id: "report", label: "Warning & Hazard Report", icon: AlertTriangle },
 ];
@@ -73,6 +75,7 @@ function Shell() {
       </div>
       {monitor.page === "raw" && <RawPage />}
       {monitor.page === "live" && <MapPage />}
+      {monitor.page === "trending" && <TrendingPage />}
       {monitor.page === "summary" && <SummaryPage />}
       {monitor.page === "report" && <ReportPage />}
     </div>
