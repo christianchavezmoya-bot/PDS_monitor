@@ -3,7 +3,7 @@
 mod db;
 mod mqtt;
 
-use db::{DerivedDump, MqttSettings, RawMessage, RawQuery};
+use db::{DerivedDump, MachineAssignment, MqttSettings, PadAssignment, RawMessage, RawQuery};
 use mqtt::MqttRuntime;
 use rusqlite::Connection;
 use std::net::{IpAddr, Ipv4Addr, TcpStream};
@@ -150,6 +150,15 @@ fn start_local_broker(state: State<AppDb>, port: u16) -> Result<String, String> 
 }
 
 #[tauri::command]
+fn list_pad_assignments(state: State<AppDb>) -> Result<Vec<PadAssignment>, String> { let conn=state.conn.lock().map_err(|e|e.to_string())?; db::list_pad_assignments(&conn).map_err(|e|e.to_string()) }
+#[tauri::command]
+fn save_pad_assignment(state: State<AppDb>, item: PadAssignment) -> Result<(), String> { let conn=state.conn.lock().map_err(|e|e.to_string())?; db::upsert_pad_assignment(&conn,&item).map_err(|e|e.to_string()) }
+#[tauri::command]
+fn list_machine_assignments(state: State<AppDb>) -> Result<Vec<MachineAssignment>, String> { let conn=state.conn.lock().map_err(|e|e.to_string())?; db::list_machine_assignments(&conn).map_err(|e|e.to_string()) }
+#[tauri::command]
+fn save_machine_assignment(state: State<AppDb>, item: MachineAssignment) -> Result<(), String> { let conn=state.conn.lock().map_err(|e|e.to_string())?; db::upsert_machine_assignment(&conn,&item).map_err(|e|e.to_string()) }
+
+#[tauri::command]
 fn replace_derived(state: State<AppDb>, dump: DerivedDump) -> Result<(), String> {
     let conn = state.conn.lock().map_err(|err| err.to_string())?;
     db::replace_derived(&conn, &dump).map_err(|err| err.to_string())
@@ -169,7 +178,7 @@ fn main() {
             });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![configure_mqtt, insert_raw, list_raw, replace_derived, list_network_adapters, diagnose_network, start_local_broker])
+        .invoke_handler(tauri::generate_handler![configure_mqtt, insert_raw, list_raw, replace_derived, list_network_adapters, diagnose_network, start_local_broker, list_pad_assignments, save_pad_assignment, list_machine_assignments, save_machine_assignment])
         .run(tauri::generate_context!())
         .expect("error while running SHR PDS Monitor");
 }

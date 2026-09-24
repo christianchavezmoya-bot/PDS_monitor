@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 export interface PadAssignment {
   padId: number;
   name: string;
@@ -43,12 +44,14 @@ export function savePadAssignment(item: PadAssignment): void {
   const all = loadPadAssignments();
   all[item.padId] = item;
   localStorage.setItem(PAD_KEY, JSON.stringify(all));
+  if ("__TAURI_INTERNALS__" in window) void invoke("save_pad_assignment", { item });
 }
 
 export function saveMachineAssignment(item: MachineAssignment): void {
   const all = loadMachineAssignments();
   all[item.controllerId] = item;
   localStorage.setItem(MACHINE_KEY, JSON.stringify(all));
+  if ("__TAURI_INTERNALS__" in window) void invoke("save_machine_assignment", { item });
 }
 
 export function loadLabelModes(): { pad: LabelMode; machine: LabelMode } {
@@ -71,4 +74,20 @@ export function formatMachineLabel(id: number, assignment: MachineAssignment | u
   if (!name || mode === "id") return `Controller ${id}`;
   if (mode === "name") return name;
   return `${name} · Controller ${id}`;
+}
+
+export async function hydrateAssignmentsFromSqlite(): Promise<void> {
+  if (!("__TAURI_INTERNALS__" in window)) return;
+  const [pads, machines] = await Promise.all([
+    invoke<PadAssignment[]>("list_pad_assignments"),
+    invoke<MachineAssignment[]>("list_machine_assignments"),
+  ]);
+  const localPads = loadPadAssignments();
+  const localMachines = loadMachineAssignments();
+  for (const item of pads) localPads[item.padId] = item;
+  for (const item of machines) localMachines[item.controllerId] = item;
+  localStorage.setItem(PAD_KEY, JSON.stringify(localPads));
+  localStorage.setItem(MACHINE_KEY, JSON.stringify(localMachines));
+  for (const item of Object.values(localPads)) await invoke("save_pad_assignment", { item });
+  for (const item of Object.values(localMachines)) await invoke("save_machine_assignment", { item });
 }
