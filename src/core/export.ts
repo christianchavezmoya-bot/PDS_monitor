@@ -64,9 +64,9 @@ export function eventsToCsv(events: InteractionEvent[], padAssignments: Record<n
     [
       event.id,
       event.controllerId,
-      machineAssignments[event.controllerId]?.machineName ?? machineAssignments[event.controllerId]?.machineId ?? "",
+      event.controllerNameSnapshot ?? machineAssignments[event.controllerId]?.machineName ?? machineAssignments[event.controllerId]?.machineId ?? "",
       event.padDisplayId,
-      padAssignments[event.padDisplayId]?.name ?? "",
+      event.padNameSnapshot ?? padAssignments[event.padDisplayId]?.name ?? "",
       event.kind,
       formatClock(event.startMs),
       event.endMs === null ? "" : formatClock(event.endMs),
