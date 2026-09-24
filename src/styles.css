@@ -281,7 +281,7 @@ td small { display: block; color: #8eabba; }
 .trend-labels { display:grid; grid-auto-rows:minmax(54px,1fr); background:#0b202c; border-right:1px solid #315164; }
 .trend-machine-label { display:flex; flex-direction:column; justify-content:center; padding:7px 12px; border-top:1px solid #274657; min-height:54px; }
 .trend-machine-label small { margin-top:3px; }
-.trend-viewport { position:relative; display:grid; grid-auto-rows:minmax(54px,1fr); overflow:hidden; cursor:grab; user-select:none; background:repeating-linear-gradient(90deg,#07141c 0,#07141c calc(16.666% - 1px),#18313f calc(16.666% - 1px),#18313f 16.666%); }
+.trend-viewport { position:relative; touch-action:none; display:grid; grid-auto-rows:minmax(54px,1fr); overflow:hidden; cursor:grab; user-select:none; background:repeating-linear-gradient(90deg,#07141c 0,#07141c calc(16.666% - 1px),#18313f calc(16.666% - 1px),#18313f 16.666%); }
 .trend-viewport:active { cursor:grabbing; }
 .trend-lane { position:relative; min-height:54px; border-top:1px solid #274657; }
 .trend-gridline { position:absolute; top:0; bottom:0; width:1px; background:#31516466; pointer-events:none; z-index:0; }
@@ -326,3 +326,6 @@ td small { display: block; color: #8eabba; }
 
 .trending-toolbar { position:relative; z-index:6; pointer-events:auto; }
 .trend-options button,.trend-options label,.trending-toolbar button,.trending-toolbar input,.trend-footer button,.trend-overview-track { pointer-events:auto; }
+
+.trend-toggle { padding:5px 8px; font-size:11px; background:#102635; color:#9db6c5; border-color:#345468; }
+.trend-toggle.active { background:#12384c; color:#e7f3f8; border-color:#39b4ff; }
