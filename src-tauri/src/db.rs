@@ -314,7 +314,7 @@ pub fn replace_derived(conn: &Connection, dump: &DerivedDump) -> rusqlite::Resul
             "INSERT INTO pad_state_transitions (id, controller_id, pad_display_id, from_state, to_state, at_ms, raw_message_id, parking_brake_release)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
-                event_id,
+                opt_string(item, "id"),
                 opt_i64(item, "controllerId"),
                 opt_i64(item, "padDisplayId"),
                 opt_i64(item, "fromState"),
@@ -337,7 +337,7 @@ pub fn replace_derived(conn: &Connection, dump: &DerivedDump) -> rusqlite::Resul
             "INSERT INTO pds_events (id, controller_id, pad_display_id, kind, start_ms, end_ms, duration_ms, journey, parking_brake_release, input1, derived_pds, generator_snapshot, raw_ids, open, pad_name_snapshot, controller_name_snapshot)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
             params![
-                opt_string(item, "id"),
+                event_id,
                 opt_i64(item, "controllerId"),
                 opt_i64(item, "padDisplayId"),
                 opt_string(item, "kind"),
@@ -388,14 +388,18 @@ pub struct MachineAssignment { pub controller_id: i64, pub machine_id: String, p
 
 pub fn list_pad_assignments(conn: &Connection) -> rusqlite::Result<Vec<PadAssignment>> {
     let mut stmt=conn.prepare("SELECT pad_id,name,employee_id,notes FROM pad_assignments ORDER BY pad_id")?;
-    stmt.query_map([], |r| Ok(PadAssignment{pad_id:r.get(0)?,name:r.get(1)?,employee_id:r.get(2)?,notes:r.get(3)?}))?.collect()
+    let rows = stmt.query_map([], |r| Ok(PadAssignment{pad_id:r.get(0)?,name:r.get(1)?,employee_id:r.get(2)?,notes:r.get(3)?}))?;
+    let items = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(items)
 }
 pub fn upsert_pad_assignment(conn:&Connection,item:&PadAssignment)->rusqlite::Result<()> {
     conn.execute("INSERT INTO pad_assignments(pad_id,name,employee_id,notes,updated_at_ms) VALUES(?1,?2,?3,?4,?5) ON CONFLICT(pad_id) DO UPDATE SET name=excluded.name,employee_id=excluded.employee_id,notes=excluded.notes,updated_at_ms=excluded.updated_at_ms",params![item.pad_id,item.name,item.employee_id,item.notes,chrono::Utc::now().timestamp_millis()])?; Ok(())
 }
 pub fn list_machine_assignments(conn: &Connection) -> rusqlite::Result<Vec<MachineAssignment>> {
     let mut stmt=conn.prepare("SELECT controller_id,machine_id,machine_name,notes FROM machine_assignments ORDER BY controller_id")?;
-    stmt.query_map([], |r| Ok(MachineAssignment{controller_id:r.get(0)?,machine_id:r.get(1)?,machine_name:r.get(2)?,notes:r.get(3)?}))?.collect()
+    let rows = stmt.query_map([], |r| Ok(MachineAssignment{controller_id:r.get(0)?,machine_id:r.get(1)?,machine_name:r.get(2)?,notes:r.get(3)?}))?;
+    let items = rows.collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(items)
 }
 pub fn upsert_machine_assignment(conn:&Connection,item:&MachineAssignment)->rusqlite::Result<()> {
     conn.execute("INSERT INTO machine_assignments(controller_id,machine_id,machine_name,notes,updated_at_ms) VALUES(?1,?2,?3,?4,?5) ON CONFLICT(controller_id) DO UPDATE SET machine_id=excluded.machine_id,machine_name=excluded.machine_name,notes=excluded.notes,updated_at_ms=excluded.updated_at_ms",params![item.controller_id,item.machine_id,item.machine_name,item.notes,chrono::Utc::now().timestamp_millis()])?; Ok(())
