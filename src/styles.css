@@ -211,3 +211,26 @@ td small { display: block; color: #8eabba; }
 .assignment-row button { padding: 5px 8px; }
 .label-mode { display: flex; gap: 7px; align-items: center; margin: 7px 0; color: #9db6c5; font-size: 12px; }
 .label-mode select { flex: 1; }
+
+/* Operational Live Map */
+.dashboard { grid-template-columns: 250px minmax(620px, 1fr) 285px; }
+.scene { height: calc(100vh - 235px); min-height: 480px; }
+.zone-warning { fill: #f2a51d30; stroke: #f2a51d; stroke-width: .12; transition: fill .2s, filter .2s; }
+.zone-warning.active { fill: #ff9d0075; stroke: #ffb21c; filter: drop-shadow(0 0 .3px #ff9d00); }
+.zone-hazard { fill: #d9414138; stroke: #e34b4b; stroke-width: .12; }
+.zone-hazard.active { fill: #ff1f1f8c; stroke: #ff5757; animation: hazard-zone-pulse 1s ease-in-out infinite; }
+@keyframes hazard-zone-pulse { 0%,100% { opacity:.72; filter:drop-shadow(0 0 .15px #ff2424); } 50% { opacity:1; filter:drop-shadow(0 0 .55px #ff2424); } }
+.miner-marker { width: 34px; height: 34px; display:grid; place-items:center; border-radius:50%; padding:0; color:white; }
+.miner-marker.warning { background:#f39a00; border:2px solid #ffd27a; }
+.miner-marker.hazard { background:#e12626; border:2px solid #ff8a8a; }
+.miner-symbol { font-size:22px; line-height:1; }
+.pad-card { margin:7px 0; padding:10px; border:1px solid transparent; border-radius:7px; }
+.pad-card.pad-monitor { background:#123b20; border-color:#56cf61; }
+.pad-card.pad-silent { background:#0b3854; border-color:#39b4ff; }
+.pad-card.pad-warning { background:#5a3508; border-color:#ffad24; box-shadow:0 0 10px #ff9d0038; }
+.pad-card.pad-hazard { background:#5b1111; border-color:#ff5656; box-shadow:0 0 12px #ff242455; }
+.pad-card.pad-id, .pad-card.pad-unmapped_3 { background:#263640; border-color:#607887; }
+.generator-card { margin:7px 0; padding:9px; border:1px solid #607887; border-radius:7px; background:#172832; }
+.generator-card > small { margin-left:28px; }
+.generator-unvalidated::after { content:"STATUS UNVALIDATED"; display:block; margin:4px 0 0 28px; color:#d7c27a; font-size:11px; font-weight:700; }
+@media (prefers-reduced-motion: reduce) { .zone-hazard.active { animation:none; opacity:1; } }

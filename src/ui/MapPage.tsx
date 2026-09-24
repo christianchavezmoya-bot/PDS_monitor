@@ -55,12 +55,12 @@ function markerStyle(stateCode: number, index: number): { left: string; top: str
   return meterPct(x, y);
 }
 
-function ZoneLayer({ showMiner }: { showMiner: boolean }) {
+function ZoneLayer({ showMiner, warningActive, hazardActive }: { showMiner: boolean; warningActive: boolean; hazardActive: boolean }) {
   return (
     <svg className="zone-layer" viewBox={`${FIELD_FRAME.x} ${FIELD_FRAME.y} ${FIELD_FRAME.w} ${FIELD_FRAME.h}`} preserveAspectRatio="none" aria-hidden="true">
       <ellipse cx="0" cy="0" rx={ZONE_ELLIPSES.monitor.rx} ry={ZONE_ELLIPSES.monitor.ry} fill="#3aaa4728" stroke="#56cf61" strokeWidth="0.12" />
-      <ellipse cx="0" cy="0" rx={ZONE_ELLIPSES.warning.rx} ry={ZONE_ELLIPSES.warning.ry} fill="#f2a51d30" stroke="#f2a51d" strokeWidth="0.12" />
-      <ellipse cx="0" cy="0" rx={ZONE_ELLIPSES.hazard.rx} ry={ZONE_ELLIPSES.hazard.ry} fill="#d9414138" stroke="#e34b4b" strokeWidth="0.12" />
+      <ellipse className={warningActive ? "zone-warning active" : "zone-warning"} cx="0" cy="0" rx={ZONE_ELLIPSES.warning.rx} ry={ZONE_ELLIPSES.warning.ry} />
+      <ellipse className={hazardActive ? "zone-hazard active" : "zone-hazard"} cx="0" cy="0" rx={ZONE_ELLIPSES.hazard.rx} ry={ZONE_ELLIPSES.hazard.ry} />
       {showMiner &&
         CM_SILENT_ZONES.map((zone) => (
           <ellipse
@@ -97,6 +97,9 @@ export function MapPage() {
   const pads = snap.pads.filter((pad) => !controller || pad.controllerId === controller.controllerId);
   const generators = snap.generators.filter((item) => !controller || item.controllerId === controller.controllerId);
   const silent = pads.filter((pad) => pad.stateCode === 2);
+  const warningActive = pads.some((pad) => pad.stateCode === 4);
+  const hazardActive = pads.some((pad) => pad.stateCode === 5);
+  const sortedPads = [...pads].sort((a, b) => b.lastSeenMs - a.lastSeenMs);
   const brake = controller?.parkingBrakeRelease ?? null;
   const brakeClass = brake === 1 ? "brake-on" : brake === 0 ? "brake-off" : "brake-unknown";
   const grouped = new Map<number, PadLive[]>();
@@ -167,10 +170,10 @@ export function MapPage() {
           <h3>Generators</h3>
           {generators.length === 0 && <p>No generator identity yet.</p>}
           {generators.map((generator, index) => (
-            <p key={generator.generatorId}>
+            <div className="generator-card generator-unvalidated" key={generator.generatorId}>
               <i>{index + 1}</i> ID <b>{generator.generatorId}</b> <span className="muted">Unvalidated</span>
               <small>FW {generator.firmware ?? "—"} · raw {generator.unmapped.map((item) => item.value).join(", ") || "—"}</small>
-            </p>
+            </div>
           ))}
           <small>Low Voltage and Communications Error are not mapped. Raw generator numbers are preserved.</small>
         </div>
@@ -179,22 +182,26 @@ export function MapPage() {
         <h1>Live PDS monitor</h1>
         <h2>Shuttle Car and Continuous Miner</h2>
         <div className="scene" style={{ aspectRatio: `${FIELD_FRAME.w} / ${FIELD_FRAME.h}` }}>
-          <ZoneLayer showMiner={silent.length > 0} />
+          <ZoneLayer showMiner={silent.length > 0} warningActive={warningActive} hazardActive={hazardActive} />
           <MachineArt src="/machines/shuttle-car.svg?plan=1" className={`machine-art shuttle ${brakeClass}`} style={meterBox(SHUTTLE_BOX)} />
           {silent.length > 0 && (
             <MachineArt src="/machines/continuous-miner.svg" className="machine-art miner" style={meterBox(MINER_BOX)} />
           )}
           {[...grouped.entries()].flatMap(([state, list]) =>
-            list.map((pad, index) => (
-              <div
-                key={`${pad.controllerId}-${pad.displayId}`}
-                className={`marker state ${padStateName(state).toLowerCase()}`}
-                style={markerStyle(state, index)}
-              >
-                {formatPadLabel(pad.displayId, padAssignments[pad.displayId], labelModes.pad)}
-                <small>{padStateName(state)}</small>
-              </div>
-            )),
+            state === 2 ? [] : list.map((pad, index) => {
+              const critical = state === 4 || state === 5;
+              return (
+                <div
+                  key={`${pad.controllerId}-${pad.displayId}`}
+                  className={critical ? `marker miner-marker ${padStateName(state).toLowerCase()}` : `marker state ${padStateName(state).toLowerCase()}`}
+                  style={markerStyle(state, index)}
+                  title={`${formatPadLabel(pad.displayId, padAssignments[pad.displayId], labelModes.pad)} — ${padStateName(state)}`}
+                >
+                  {critical ? <span className="miner-symbol" aria-label="miner">♟</span> : formatPadLabel(pad.displayId, padAssignments[pad.displayId], labelModes.pad)}
+                  {!critical && <small>{padStateName(state)}</small>}
+                </div>
+              );
+            }),
           )}
         </div>
         <p className="notice">
@@ -208,8 +215,8 @@ export function MapPage() {
           <label className="label-mode">Display <select value={labelModes.pad} onChange={(e) => updateModes("pad", e.target.value as LabelMode)}>
             <option value="id">ID only</option><option value="name">Name only</option><option value="both">Both</option>
           </select></label>
-          {pads.map((pad) => (
-            <div className="pad" key={pad.displayId}>
+          {sortedPads.map((pad) => (
+            <div className={`pad pad-card pad-${padStateName(pad.stateCode).toLowerCase()}`} key={pad.displayId}>
               <b>{formatPadLabel(pad.displayId, padAssignments[pad.displayId], labelModes.pad)}</b>
               <div className="assignment-row">
                 <input value={editPad.startsWith(`${pad.displayId}:`) ? editPad.slice(editPad.indexOf(":") + 1) : ""} onChange={(e) => setEditPad(`${pad.displayId}:${e.target.value}`)} placeholder="Assign person name" />
@@ -231,7 +238,7 @@ export function MapPage() {
               </small>
             </div>
           ))}
-          {pads.length === 0 && <p>No live PAD messages yet. Replay site visit plays the 22 Sept recording.</p>}
+          {sortedPads.length === 0 && <p>No live PAD messages yet. Replay site visit plays the 22 Sept recording.</p>}
         </div>
         <div className="panel">
           <h3>Derived PDS summary</h3>
